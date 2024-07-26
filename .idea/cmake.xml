@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeSharedSettings">
+    <configurations>
+      <configuration PROFILE_NAME="ZDebug" ENABLED="true" GENERATION_DIR="cmake-build-zdebug" CONFIG_NAME="ZDebug">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="_" value="/usr/bin/env" />
+            <env name="BOARD" value="adafruit_itsybitsy_nrf52840" />
+            <env name="CHROME_DESKTOP" value="code-url-handler.desktop" />
+            <env name="CMAKE_EXPORT_COMPILE_COMMANDS" value="ON" />
+            <env name="COLORTERM" value="truecolor" />
+            <env name="DESKTOP_SESSION" value="plasmawayland-dev6" />
+            <env name="DISPLAY" value=":1" />
+            <env name="DOTNET_BUNDLE_EXTRACT_BASE_DIR" value="$USER_HOME$/.cache/dotnet_bundle_extract" />
+            <env name="ELECTRON_RUN_AS_NODE" value="1" />
+            <env name="GDK_BACKEND" value="x11" />
+            <env name="GIT_ASKPASS" value="/usr/share/code/resources/app/extensions/git/dist/askpass.sh" />
+            <env name="GIT_EXEC_PATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local/libexec/git-core" />
+            <env name="GIT_TEMPLATE_DIR" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local/share/git-core/templates" />
+            <env name="GNUARMEMB_TOOLCHAIN_PATH" value="" />
+            <env name="GSM_SKIP_SSH_AGENT_WORKAROUND" value="true" />
+            <env name="GTK2_RC_FILES" value="/etc/gtk-2.0/gtkrc:/home/me/.gtkrc-2.0:/home/me/.config/gtkrc-2.0" />
+            <env name="GTK_RC_FILES" value="/etc/gtk/gtkrc:/home/me/.gtkrc:/home/me/.config/gtkrc" />
+            <env name="HOME" value="$USER_HOME$" />
+            <env name="ICEAUTHORITY" value="/run/user/1000/iceauth_hpykiX" />
+            <env name="IM_CONFIG_CHECK_ENV" value="1" />
+            <env name="IM_CONFIG_PHASE" value="1" />
+            <env name="KDE_APPLICATIONS_AS_SCOPE" value="1" />
+            <env name="KDE_FULL_SESSION" value="true" />
+            <env name="KDE_SESSION_UID" value="1000" />
+            <env name="KDE_SESSION_VERSION" value="6" />
+            <env name="LANG" value="en_US.UTF-8" />
+            <env name="LD_LIBRARY_PATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/lib:/home/me/ncs/toolchains/e9dba88316/usr/lib/x86_64-linux-gnu:/home/me/ncs/toolchains/e9dba88316/usr/local/lib:/home/me/.vscode/extensions/nordic-semiconductor.nrf-connect-2024.7.18-linux-x64/platform/nrfutil/lib/nrfutil-toolchain-manager" />
+            <env name="LESSCLOSE" value="/usr/bin/lesspipe %s %s" />
+            <env name="LESSOPEN" value="| /usr/bin/lesspipe %s" />
+            <env name="LOGNAME" value="me" />
+            <env name="LS_COLORS" value="rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:" />
+            <env name="MANAGERPID" value="1711" />
+            <env name="MEMORY_PRESSURE_WATCH" value="/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-plasmashell.service/memory.pressure" />
+            <env name="NRF_CONNECT_VSCODE" value="1" />
+            <env name="ORIGINAL_XDG_CURRENT_DESKTOP" value="KDE" />
+            <env name="PYTHONHOME" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local" />
+            <env name="PYTHONPATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local/lib/python3.9:/home/me/ncs/toolchains/e9dba88316/usr/local/lib/python3.9/site-packages" />
+            <env name="QML2_IMPORT_PATH" value="$USER_HOME$/kde/usr/lib/x86_64-linux-gnu/qml:" />
+            <env name="QT_ACCESSIBILITY" value="1" />
+            <env name="QT_AUTO_SCREEN_SCALE_FACTOR" value="0" />
+            <env name="QT_PLUGIN_PATH" value="$USER_HOME$/kde/usr/lib/x86_64-linux-gnu/plugins:" />
+            <env name="QT_QUICK_CONTROLS_STYLE_PATH" value="$USER_HOME$/kde/usr/lib/x86_64-linux-gnu/qml/QtQuick/Controls.2/:" />
+            <env name="QT_WAYLAND_RECONNECT" value="1" />
+            <env name="QTWEBENGINE_DICTIONARIES_PATH" value="/usr/share/hunspell-bdic/" />
+            <env name="SESSION_MANAGER" value="local/garage-nuc:@/tmp/.ICE-unix/2255,unix/garage-nuc:/tmp/.ICE-unix/2255" />
+            <env name="SHELL" value="/bin/bash" />
+            <env name="SHLVL" value="1" />
+            <env name="SSH_ASKPASS" value="/usr/bin/ksshaskpass" />
+            <env name="SSH_AUTH_SOCK" value="/run/user/1000/gnupg/S.gpg-agent.ssh" />
+            <env name="TERM" value="xterm-256color" />
+            <env name="TERM_PROGRAM" value="vscode" />
+            <env name="TERM_PROGRAM_VERSION" value="1.91.1" />
+            <env name="USER" value="me" />
+            <env name="VSCODE_AMD_ENTRYPOINT" value="vs/workbench/api/node/extensionHostProcess" />
+            <env name="VSCODE_CODE_CACHE_PATH" value="$USER_HOME$/.config/Code/CachedData/f1e16e1e6214d7c44d078b1f0607b2388f29d729" />
+            <env name="VSCODE_CRASH_REPORTER_PROCESS_TYPE" value="extensionHost" />
+            <env name="VSCODE_CWD" value="$USER_HOME$" />
+            <env name="VSCODE_GIT_ASKPASS_EXTRA_ARGS" value="" />
+            <env name="VSCODE_GIT_ASKPASS_MAIN" value="/usr/share/code/resources/app/extensions/git/dist/askpass-main.js" />
+            <env name="VSCODE_GIT_ASKPASS_NODE" value="/usr/share/code/code" />
+            <env name="VSCODE_GIT_IPC_HANDLE" value="/run/user/1000/vscode-git-78f1c0e446.sock" />
+            <env name="VSCODE_HANDLES_UNCAUGHT_ERRORS" value="true" />
+            <env name="VSCODE_IPC_HOOK" value="/run/user/1000/vscode-028a4471-1.91-main.sock" />
+            <env name="VSCODE_NLS_CONFIG" value="{&quot;locale&quot;:&quot;en-us&quot;,&quot;osLocale&quot;:&quot;en-us&quot;,&quot;availableLanguages&quot;:{},&quot;_languagePackSupport&quot;:true}" />
+            <env name="VSCODE_PID" value="3902" />
+            <env name="WAYLAND_DISPLAY" value="wayland-0" />
+            <env name="XAUTHORITY" value="/run/user/1000/xauth_xyjOUd" />
+            <env name="XCURSOR_PATH" value="$USER_HOME$/kde/usr/share/icons::~/.icons:/usr/share/icons:/usr/share/pixmaps:/usr/X11R6/lib/X11/icons" />
+            <env name="XDG_CONFIG_DIRS" value="$USER_HOME$/.config/kdedefaults:/home/me/kde/usr/etc/xdg:/etc/xdg/xdg-plasmawayland-dev6:/etc/xdg" />
+            <env name="XDG_CURRENT_DESKTOP" value="KDE" />
+            <env name="XDG_DATA_DIRS" value="$USER_HOME$/kde/usr/share:/usr/share/plasmawayland-dev6:/home/me/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop" />
+            <env name="XDG_MENU_PREFIX" value="plasma-" />
+            <env name="XDG_RUNTIME_DIR" value="/run/user/1000" />
+            <env name="XDG_SEAT" value="seat0" />
+            <env name="XDG_SEAT_PATH" value="/org/freedesktop/DisplayManager/Seat0" />
+            <env name="XDG_SESSION_CLASS" value="user" />
+            <env name="XDG_SESSION_DESKTOP" value="KDE" />
+            <env name="XDG_SESSION_ID" value="1" />
+            <env name="XDG_SESSION_PATH" value="/org/freedesktop/DisplayManager/Session0" />
+            <env name="XDG_SESSION_TYPE" value="wayland" />
+            <env name="XDG_VTNR" value="1" />
+            <env name="XKB_DEFAULT_LAYOUT" value="us" />
+            <env name="XKB_DEFAULT_MODEL" value="pc105" />
+            <env name="ZEPHYR_BASE" value="$USER_HOME$/ncs/v2.7.0/zephyr" />
+            <env name="ZEPHYR_SDK_INSTALL_DIR" value="$USER_HOME$/ncs/toolchains/e9dba88316/opt/zephyr-sdk" />
+            <env name="ZEPHYR_TOOLCHAIN_VARIANT" value="zephyr" />
+            <env name="DBUS_SESSION_BUS_ADDRESS" value="unix:path" />
+            <env name="DEBUGINFOD_URLS" value="https://debuginfod.ubuntu.com" />
+            <env name="INVOCATION_ID" value="4c3d0bc3704a47c4a8b76da9dc040264" />
+            <env name="JOURNAL_STREAM" value="8:16787" />
+            <env name="MEMORY_PRESSURE_WRITE" value="c29tZSAyMDAwMDAgMjAwMDAwMAA" />
+            <env name="PATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/bin:/home/me/ncs/toolchains/e9dba88316/usr/bin:/home/me/ncs/toolchains/e9dba88316/usr/local/bin:/home/me/ncs/toolchains/e9dba88316/opt/bin:/home/me/ncs/toolchains/e9dba88316/opt/nanopb/generator-bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/aarch64-zephyr-elf/bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/x86_64-zephyr-elf/bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/arm-zephyr-eabi/bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/riscv64-zephyr-elf/bin:/home/me/.local/bin:/home/me/kde/usr/bin:/home/me/.cargo/bin:/home/me/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/me/.dotnet/tools:/home/me/.local/share/JetBrains/Toolbox/scripts:/home/me/.local/share/JetBrains/Toolbox/scripts:/home/me/.local/bin:/home/me/kde/usr/bin:/home/me/.cargo/bin:/home/me/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/me/.dotnet/tools:/home/me/.local/share/JetBrains/Toolbox/scripts:/home/me/.local/share/JetBrains/Toolbox/scripts" />
+            <env name="PWD" value="$PROJECT_DIR$" />
+            <env name="SYSTEMD_EXEC_PID" value="2275" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+      <configuration PROFILE_NAME="ZRelease" ENABLED="true" GENERATION_DIR="cmake-build-zrelease" CONFIG_NAME="ZRelease">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="_" value="/usr/bin/env" />
+            <env name="BOARD" value="adafruit_itsybitsy_nrf52840" />
+            <env name="CHROME_DESKTOP" value="code-url-handler.desktop" />
+            <env name="CMAKE_EXPORT_COMPILE_COMMANDS" value="ON" />
+            <env name="COLORTERM" value="truecolor" />
+            <env name="DESKTOP_SESSION" value="plasmawayland-dev6" />
+            <env name="DISPLAY" value=":1" />
+            <env name="DOTNET_BUNDLE_EXTRACT_BASE_DIR" value="$USER_HOME$/.cache/dotnet_bundle_extract" />
+            <env name="ELECTRON_RUN_AS_NODE" value="1" />
+            <env name="GDK_BACKEND" value="x11" />
+            <env name="GIT_ASKPASS" value="/usr/share/code/resources/app/extensions/git/dist/askpass.sh" />
+            <env name="GIT_EXEC_PATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local/libexec/git-core" />
+            <env name="GIT_TEMPLATE_DIR" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local/share/git-core/templates" />
+            <env name="GNUARMEMB_TOOLCHAIN_PATH" value="" />
+            <env name="GSM_SKIP_SSH_AGENT_WORKAROUND" value="true" />
+            <env name="GTK2_RC_FILES" value="/etc/gtk-2.0/gtkrc:/home/me/.gtkrc-2.0:/home/me/.config/gtkrc-2.0" />
+            <env name="GTK_RC_FILES" value="/etc/gtk/gtkrc:/home/me/.gtkrc:/home/me/.config/gtkrc" />
+            <env name="HOME" value="$USER_HOME$" />
+            <env name="ICEAUTHORITY" value="/run/user/1000/iceauth_hpykiX" />
+            <env name="IM_CONFIG_CHECK_ENV" value="1" />
+            <env name="IM_CONFIG_PHASE" value="1" />
+            <env name="KDE_APPLICATIONS_AS_SCOPE" value="1" />
+            <env name="KDE_FULL_SESSION" value="true" />
+            <env name="KDE_SESSION_UID" value="1000" />
+            <env name="KDE_SESSION_VERSION" value="6" />
+            <env name="LANG" value="en_US.UTF-8" />
+            <env name="LD_LIBRARY_PATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/lib:/home/me/ncs/toolchains/e9dba88316/usr/lib/x86_64-linux-gnu:/home/me/ncs/toolchains/e9dba88316/usr/local/lib:/home/me/.vscode/extensions/nordic-semiconductor.nrf-connect-2024.7.18-linux-x64/platform/nrfutil/lib/nrfutil-toolchain-manager" />
+            <env name="LESSCLOSE" value="/usr/bin/lesspipe %s %s" />
+            <env name="LESSOPEN" value="| /usr/bin/lesspipe %s" />
+            <env name="LOGNAME" value="me" />
+            <env name="LS_COLORS" value="rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:" />
+            <env name="MANAGERPID" value="1711" />
+            <env name="MEMORY_PRESSURE_WATCH" value="/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/plasma-plasmashell.service/memory.pressure" />
+            <env name="NRF_CONNECT_VSCODE" value="1" />
+            <env name="ORIGINAL_XDG_CURRENT_DESKTOP" value="KDE" />
+            <env name="PYTHONHOME" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local" />
+            <env name="PYTHONPATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/local/lib/python3.9:/home/me/ncs/toolchains/e9dba88316/usr/local/lib/python3.9/site-packages" />
+            <env name="QML2_IMPORT_PATH" value="$USER_HOME$/kde/usr/lib/x86_64-linux-gnu/qml:" />
+            <env name="QT_ACCESSIBILITY" value="1" />
+            <env name="QT_AUTO_SCREEN_SCALE_FACTOR" value="0" />
+            <env name="QT_PLUGIN_PATH" value="$USER_HOME$/kde/usr/lib/x86_64-linux-gnu/plugins:" />
+            <env name="QT_QUICK_CONTROLS_STYLE_PATH" value="$USER_HOME$/kde/usr/lib/x86_64-linux-gnu/qml/QtQuick/Controls.2/:" />
+            <env name="QT_WAYLAND_RECONNECT" value="1" />
+            <env name="QTWEBENGINE_DICTIONARIES_PATH" value="/usr/share/hunspell-bdic/" />
+            <env name="SESSION_MANAGER" value="local/garage-nuc:@/tmp/.ICE-unix/2255,unix/garage-nuc:/tmp/.ICE-unix/2255" />
+            <env name="SHELL" value="/bin/bash" />
+            <env name="SHLVL" value="1" />
+            <env name="SSH_ASKPASS" value="/usr/bin/ksshaskpass" />
+            <env name="SSH_AUTH_SOCK" value="/run/user/1000/gnupg/S.gpg-agent.ssh" />
+            <env name="TERM" value="xterm-256color" />
+            <env name="TERM_PROGRAM" value="vscode" />
+            <env name="TERM_PROGRAM_VERSION" value="1.91.1" />
+            <env name="USER" value="me" />
+            <env name="VSCODE_AMD_ENTRYPOINT" value="vs/workbench/api/node/extensionHostProcess" />
+            <env name="VSCODE_CODE_CACHE_PATH" value="$USER_HOME$/.config/Code/CachedData/f1e16e1e6214d7c44d078b1f0607b2388f29d729" />
+            <env name="VSCODE_CRASH_REPORTER_PROCESS_TYPE" value="extensionHost" />
+            <env name="VSCODE_CWD" value="$USER_HOME$" />
+            <env name="VSCODE_GIT_ASKPASS_EXTRA_ARGS" value="" />
+            <env name="VSCODE_GIT_ASKPASS_MAIN" value="/usr/share/code/resources/app/extensions/git/dist/askpass-main.js" />
+            <env name="VSCODE_GIT_ASKPASS_NODE" value="/usr/share/code/code" />
+            <env name="VSCODE_GIT_IPC_HANDLE" value="/run/user/1000/vscode-git-78f1c0e446.sock" />
+            <env name="VSCODE_HANDLES_UNCAUGHT_ERRORS" value="true" />
+            <env name="VSCODE_IPC_HOOK" value="/run/user/1000/vscode-028a4471-1.91-main.sock" />
+            <env name="VSCODE_NLS_CONFIG" value="{&quot;locale&quot;:&quot;en-us&quot;,&quot;osLocale&quot;:&quot;en-us&quot;,&quot;availableLanguages&quot;:{},&quot;_languagePackSupport&quot;:true}" />
+            <env name="VSCODE_PID" value="3902" />
+            <env name="WAYLAND_DISPLAY" value="wayland-0" />
+            <env name="XAUTHORITY" value="/run/user/1000/xauth_xyjOUd" />
+            <env name="XCURSOR_PATH" value="$USER_HOME$/kde/usr/share/icons::~/.icons:/usr/share/icons:/usr/share/pixmaps:/usr/X11R6/lib/X11/icons" />
+            <env name="XDG_CONFIG_DIRS" value="$USER_HOME$/.config/kdedefaults:/home/me/kde/usr/etc/xdg:/etc/xdg/xdg-plasmawayland-dev6:/etc/xdg" />
+            <env name="XDG_CURRENT_DESKTOP" value="KDE" />
+            <env name="XDG_DATA_DIRS" value="$USER_HOME$/kde/usr/share:/usr/share/plasmawayland-dev6:/home/me/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop" />
+            <env name="XDG_MENU_PREFIX" value="plasma-" />
+            <env name="XDG_RUNTIME_DIR" value="/run/user/1000" />
+            <env name="XDG_SEAT" value="seat0" />
+            <env name="XDG_SEAT_PATH" value="/org/freedesktop/DisplayManager/Seat0" />
+            <env name="XDG_SESSION_CLASS" value="user" />
+            <env name="XDG_SESSION_DESKTOP" value="KDE" />
+            <env name="XDG_SESSION_ID" value="1" />
+            <env name="XDG_SESSION_PATH" value="/org/freedesktop/DisplayManager/Session0" />
+            <env name="XDG_SESSION_TYPE" value="wayland" />
+            <env name="XDG_VTNR" value="1" />
+            <env name="XKB_DEFAULT_LAYOUT" value="us" />
+            <env name="XKB_DEFAULT_MODEL" value="pc105" />
+            <env name="ZEPHYR_BASE" value="$USER_HOME$/ncs/v2.7.0/zephyr" />
+            <env name="ZEPHYR_SDK_INSTALL_DIR" value="$USER_HOME$/ncs/toolchains/e9dba88316/opt/zephyr-sdk" />
+            <env name="ZEPHYR_TOOLCHAIN_VARIANT" value="zephyr" />
+            <env name="DBUS_SESSION_BUS_ADDRESS" value="unix:path" />
+            <env name="DEBUGINFOD_URLS" value="https://debuginfod.ubuntu.com" />
+            <env name="INVOCATION_ID" value="4c3d0bc3704a47c4a8b76da9dc040264" />
+            <env name="JOURNAL_STREAM" value="8:16787" />
+            <env name="MEMORY_PRESSURE_WRITE" value="c29tZSAyMDAwMDAgMjAwMDAwMAA" />
+            <env name="PATH" value="$USER_HOME$/ncs/toolchains/e9dba88316/usr/bin:/home/me/ncs/toolchains/e9dba88316/usr/bin:/home/me/ncs/toolchains/e9dba88316/usr/local/bin:/home/me/ncs/toolchains/e9dba88316/opt/bin:/home/me/ncs/toolchains/e9dba88316/opt/nanopb/generator-bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/aarch64-zephyr-elf/bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/x86_64-zephyr-elf/bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/arm-zephyr-eabi/bin:/home/me/ncs/toolchains/e9dba88316/opt/zephyr-sdk/riscv64-zephyr-elf/bin:/home/me/.local/bin:/home/me/kde/usr/bin:/home/me/.cargo/bin:/home/me/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/me/.dotnet/tools:/home/me/.local/share/JetBrains/Toolbox/scripts:/home/me/.local/share/JetBrains/Toolbox/scripts:/home/me/.local/bin:/home/me/kde/usr/bin:/home/me/.cargo/bin:/home/me/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/me/.dotnet/tools:/home/me/.local/share/JetBrains/Toolbox/scripts:/home/me/.local/share/JetBrains/Toolbox/scripts" />
+            <env name="PWD" value="$PROJECT_DIR$" />
+            <env name="SYSTEMD_EXEC_PID" value="2275" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+    </configurations>
+  </component>
+</project>

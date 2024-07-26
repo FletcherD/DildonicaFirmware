@@ -1,0 +1,10 @@
+# editors
+*.swp
+*~
+
+/.vscode/*
+
+# build
+/cmake-build*/
+
+
