@@ -10,7 +10,8 @@
 #include <math.h>
 #include "circularbuffer.hpp"
 
-#include <zephyr/drivers/uart.h>
+#include <nrfx_uarte.h>
+#include <nrfx_gpiote.h>
 
 #include "dildonica.hpp"
 
@@ -90,25 +91,44 @@ char ( &_ArraySizeHelper( T (&array)[N] ))[N];
 
 /* UARTE *///////////////////////////////
 
-#define UART_DEVICE_NODE DT_CHOSEN(zephyr_shell_uart)
-static const struct device *const uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
-static char uart_tx_buffer[64];
+/** @brief Symbol specifying UARTE instance to be used. */
+#define UARTE_INST_IDX 1
 
-void print_uart(char *buf, size_t msg_len)
+/** @brief Symbol specifying TX pin number of UARTE. */
+#define UARTE_TX_PIN NRF_GPIO_PIN_MAP(0,3)
+
+/** @brief Symbol specifying RX pin number of UARTE. */
+#define UARTE_RX_PIN NRF_GPIO_PIN_MAP(0,28)
+
+nrfx_uarte_t uarte_inst = NRFX_UARTE_INSTANCE(UARTE_INST_IDX);
+
+static void uarte_handler(nrfx_uarte_event_t const * p_event, void * p_context)
 {
-	for (int i = 0; i < msg_len; i++) {
-		uart_poll_out(uart_dev, buf[i]);
-	}
+}
+
+void setup_uarte() {
+
+#if defined(__ZEPHYR__)
+    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_UARTE_INST_GET(UARTE_INST_IDX)), IRQ_PRIO_LOWEST,
+                NRFX_UARTE_INST_HANDLER_GET(UARTE_INST_IDX), 0, 0);
+#endif
+
+    nrfx_uarte_config_t uarte_config = NRFX_UARTE_DEFAULT_CONFIG(UARTE_TX_PIN, UARTE_RX_PIN);
+    uarte_config.p_context = &uarte_inst;
+    uarte_config.baudrate = NRF_UARTE_BAUDRATE_1000000;
+    nrfx_uarte_init(&uarte_inst, &uarte_config, uarte_handler);
 }
 
 void printf_uart( const char* format, ... ) {
+    static uint8_t tx_buffer[64];
     va_list arglist;
     va_start( arglist, format );
-    size_t len = vsprintf( uart_tx_buffer, format, arglist );
+    size_t len = vsprintf( (char*)tx_buffer, format, arglist );
     va_end( arglist );
 
-    print_uart(uart_tx_buffer, len);
+    nrfx_uarte_tx(&uarte_inst, tx_buffer, len, 0);
 }
+
 
 /* UARTE *///////////////////////////////
 
@@ -257,7 +277,7 @@ void setup_timers() {
 
 
 int main(void) {
-    //setup_uarte();
+    setup_uarte();
 
     setup_gpio();
     setup_timers();
