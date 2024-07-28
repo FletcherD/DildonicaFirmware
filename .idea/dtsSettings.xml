@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="com.intellij.dts.settings.DtsSettings">
-    <option name="zephyrBoard" value="$USER_HOME$/ncs/v2.7.0/zephyr/boards/adafruit/itsybitsy" />
+    <option name="zephyrBoard" value="$USER_HOME$/ncs/v2.7.0/zephyr/boards/arduino/nano_33_ble" />
     <option name="zephyrRoot" value="$USER_HOME$/ncs/v2.7.0/zephyr" />
   </component>
 </project>

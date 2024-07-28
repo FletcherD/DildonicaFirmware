@@ -19,15 +19,15 @@ public:
     void enqueue(const T& item) {
         buffer[rear] = item;
         rear = (rear + 1) % CAPACITY;
-        if (is_full()) {
-            return;
-        }
+       if (is_full()) {
+           return;
+       }
         size++;
     }
 
     T dequeue() {
         if (is_empty()) {
-            //while(1){};
+            while(1){};
         }
         T item = buffer[front];
         front = (front + 1) % CAPACITY;
@@ -37,7 +37,7 @@ public:
 
     T peek() const {
         if (is_empty()) {
-            //while(1){};
+            while(1){};
         }
         return buffer[front];
     }
