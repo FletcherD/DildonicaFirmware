@@ -1,3 +1,0 @@
-
-
-void dildonica_main();

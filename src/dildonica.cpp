@@ -13,19 +13,21 @@
 #include <nrfx_uarte.h>
 #include <nrfx_gpiote.h>
 
-#include "dildonica.hpp"
-
-
 #define D_TIMER_INST_IDX 3
 #define D_COUNTER_INST_IDX 4
 static nrfx_timer_t TIMER_D_TIMER = NRFX_TIMER_INSTANCE(D_TIMER_INST_IDX);
 static nrfx_timer_t TIMER_D_COUNTER = NRFX_TIMER_INSTANCE(D_COUNTER_INST_IDX);
 
+#define TICKS_PER_MILLISECOND (NRF_TIMER_BASE_FREQUENCY_GET(TIMER_D_TIMER.p_reg) / 1000) 
+#define TIMESTAMP_MS_MAX (1<<13)
+#define TIMESTAMP_TICKS_MAX (TIMESTAMP_MS_MAX * TICKS_PER_MILLISECOND)
+static uint32_t curTime = 0;
+
 struct DildonicaSampleRaw {
     uint8_t zone;
+    uint32_t timestamp;
     uint32_t cyclePeriod;
 };
-
 
 const float ExponentialMeanMaxError = 10000;
 const float ExponentialMeanRate = 0.001;
@@ -82,6 +84,9 @@ DildonicaZoneState dildonicaZoneStates[DILDONICA_N_ZONES];
 const uint8_t DILDONICA_MIDI_CONTROL_START = 41;
 // This is: Units of MIDI Control Change for a 100% change in cycle period
 const float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
+
+extern "C" void send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
+extern "C" void setup_bluetooth_peripheral();
 
 uint32_t led_test = 0;
 
@@ -158,9 +163,14 @@ static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
     if (event_type == NRF_TIMER_EVENT_COMPARE0) {
         // Measurement timeout - probably coil problem.
 
+        uint32_t sampleTime = DILDONICA_MEASUREMENT_TIMEOUT_US * 16;
+        curTime += sampleTime;
+        curTime = (curTime % TIMESTAMP_TICKS_MAX);
+
         DildonicaSampleRaw thisSample = {
             dildonicaCurZone,
-            DILDONICA_MEASUREMENT_TIMEOUT_US * 16
+            curTime,
+            sampleTime
         };
         dildonicaSampleQueue.enqueue(thisSample);
 
@@ -175,9 +185,13 @@ static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
 static void d_counter_handler(nrf_timer_event_t event_type, void* p_context) {
     if (event_type == NRF_TIMER_EVENT_COMPARE1) {
         // Normal coil measurement
+        
+        curTime += nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1);
+        curTime = (curTime % TIMESTAMP_TICKS_MAX);
 
         DildonicaSampleRaw thisSample = {
             dildonicaCurZone,
+            curTime,
             nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1) - nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL0)
         };
         dildonicaSampleQueue.enqueue(thisSample);
@@ -196,7 +210,7 @@ static void comp_handler(nrf_comp_event_t event_type) {
 void setup_comparator() {
 
 #if defined(__ZEPHYR__)
-    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_COMP), 0,
+    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_COMP), IRQ_PRIO_LOWEST,
                 nrfx_comp_irq_handler, 0, 0);
 #endif
 
@@ -248,9 +262,9 @@ void setup_gpio() {
 void setup_timers() {
 
 #if defined(__ZEPHYR__)
-    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(D_TIMER_INST_IDX)), 0,
+    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(D_TIMER_INST_IDX)), IRQ_PRIO_LOWEST,
                 NRFX_TIMER_INST_HANDLER_GET(D_TIMER_INST_IDX), 0, 0);
-    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(D_COUNTER_INST_IDX)), 0,
+    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(D_COUNTER_INST_IDX)), IRQ_PRIO_LOWEST,
                 NRFX_TIMER_INST_HANDLER_GET(D_COUNTER_INST_IDX), 0, 0);
 #endif
 
@@ -298,6 +312,8 @@ int main(void) {
     setup_comparator();
     setup_ppi();
 
+    setup_bluetooth_peripheral();
+
     printf_uart("Hello Dildonica\r\n");
 
     // setupMidi();
@@ -313,12 +329,16 @@ int main(void) {
             //gpio_pin_set_dt(&PIN_LED0, dSample.cyclePeriod & 1);
             gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
 
-            //printf_uart("%d, %d, %0.9f\r\n", dSample.zone, dSample.cyclePeriod, zoneState.valueNormalized);
-            printf_uart("%d, %d\r\n", dSample.zone, dSample.cyclePeriod);
+            uint32_t timestampMillis = dSample.timestamp / (TICKS_PER_MILLISECOND); 
 
-            // int32_t midiControlValue = lround(zoneState.valueNormalized * DILDONICA_MIDI_CONTROL_SLOPE) + 63;
-            // midiControlValue = max(0, midiControlValue);
-            // midiControlValue = min(127, midiControlValue);
+            //printf_uart("%d, %d, %0.9f\r\n", dSample.zone, dSample.cyclePeriod, zoneState.valueNormalized);
+            printf_uart("%d, %d, %d\r\n", dSample.zone, timestampMillis, dSample.cyclePeriod);
+
+            int32_t midiControlValue = lround(zoneState.valueNormalized * DILDONICA_MIDI_CONTROL_SLOPE) + 63;
+            midiControlValue = (midiControlValue < 0 ? 0 : (midiControlValue > 127 ? 127 : midiControlValue));
+
+            send_midi_control_change(timestampMillis, 0, DILDONICA_MIDI_CONTROL_START + dSample.zone, midiControlValue);
+
             // midiSendControlChange(DILDONICA_MIDI_CONTROL_START + dSampleZone, midiControlValue);
 
             // if(dSampleZone == DILDONICA_N_ZONES-1) {
@@ -332,6 +352,8 @@ int main(void) {
             //     rgbLed.show();
             // }
         }
+
+        k_yield();
     }
 }
 

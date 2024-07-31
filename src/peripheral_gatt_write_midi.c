@@ -82,7 +82,7 @@ static struct bt_gatt_cb gatt_callbacks = {
 	.att_mtu_updated = mtu_updated
 };
 
-static void send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
+void send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
 {
 	struct bt_conn *conn = NULL;
 
