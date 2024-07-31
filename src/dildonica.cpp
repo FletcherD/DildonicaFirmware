@@ -34,6 +34,7 @@ const float ExponentialMeanRate = 0.001;
 struct DildonicaZoneState {
     float cyclePeriodExponentialMean;
     float valueNormalized;
+    uint8_t midiControlValue;
 };
 
 #define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
@@ -71,7 +72,7 @@ const uint32_t DILDONICA_MEASUREMENT_TIMEOUT_US = 50000;
 const uint32_t DILDONICA_OSC_COMP_THRESH_LO = 10;
 const uint32_t DILDONICA_OSC_COMP_THRESH_HI = 20;
 
-const uint8_t DILDONICA_N_ZONES = 1;
+const uint8_t DILDONICA_N_ZONES = 8;
 uint8_t dildonicaCurZone = 0;
 
 static CircularQueue<DildonicaSampleRaw, 256> dildonicaSampleQueue;
@@ -141,7 +142,7 @@ void printf_uart( const char* format, ... ) {
 
 
 void setDildonicaZoneActiveMask(uint8_t zoneMask) {
-    for (uint8_t i = 0; i != DILDONICA_N_ZONES; i++) {
+    for (uint8_t i = 0; i != 8; i++) {
         bool pinState = ((1 << i) & zoneMask);
         gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], pinState);
     }
@@ -160,7 +161,7 @@ void updateDildonicaZone(DildonicaZoneState& zoneState, DildonicaSampleRaw& samp
 }
 
 static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
-    if (event_type == NRF_TIMER_EVENT_COMPARE0) {
+    if (event_type == NRF_TIMER_EVENT_COMPARE2) {
         // Measurement timeout - probably coil problem.
 
         uint32_t sampleTime = DILDONICA_MEASUREMENT_TIMEOUT_US * 16;
@@ -252,8 +253,9 @@ void setup_gpio() {
     //gpio_pin_set_dt(&PIN_LED2, LED_OFF);
     //gpio_pin_configure_dt(&PIN_DILDONICA_OSC, GPIO_INPUT);
 
-    for (int i = 0; i < mycountof(PIN_DILDONICA_ZONE_SELECT); i++) {
+    for (int i = 0; i < 8; i++) {
         gpio_pin_configure_dt(&PIN_DILDONICA_ZONE_SELECT[i], GPIO_OUTPUT);
+        gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], 0);
     }
 
     setDildonicaZoneActiveMask(1);
@@ -316,8 +318,6 @@ int main(void) {
 
     printf_uart("Hello Dildonica\r\n");
 
-    // setupMidi();
-
     while (1) {
         if (!dildonicaSampleQueue.is_empty()) {
 
@@ -327,7 +327,6 @@ int main(void) {
             updateDildonicaZone(zoneState, dSample);
 
             //gpio_pin_set_dt(&PIN_LED0, dSample.cyclePeriod & 1);
-            gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
 
             uint32_t timestampMillis = dSample.timestamp / (TICKS_PER_MILLISECOND); 
 
@@ -336,10 +335,11 @@ int main(void) {
 
             int32_t midiControlValue = lround(zoneState.valueNormalized * DILDONICA_MIDI_CONTROL_SLOPE) + 63;
             midiControlValue = (midiControlValue < 0 ? 0 : (midiControlValue > 127 ? 127 : midiControlValue));
-
-            send_midi_control_change(timestampMillis, 0, DILDONICA_MIDI_CONTROL_START + dSample.zone, midiControlValue);
-
-            // midiSendControlChange(DILDONICA_MIDI_CONTROL_START + dSampleZone, midiControlValue);
+            if(midiControlValue != zoneState.midiControlValue) {
+                //send_midi_control_change(timestampMillis, 0, DILDONICA_MIDI_CONTROL_START + dSample.zone, midiControlValue);
+                zoneState.midiControlValue = midiControlValue;
+                gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
+            }
 
             // if(dSampleZone == DILDONICA_N_ZONES-1) {
             //     uint32_t colorR = abs(10000. * (dildonicaZoneStates[0].valueNormalized + dildonicaZoneStates[1].valueNormalized + dildonicaZoneStates[2].valueNormalized));
