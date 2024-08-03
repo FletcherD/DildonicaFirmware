@@ -11,11 +11,137 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 
-extern int mtu_exchange(struct bt_conn *conn);
-extern int write_cmd(struct bt_conn *conn);
-extern struct bt_conn *conn_connected;
-extern uint32_t last_write_rate;
+// from gatt_write_common.c /////////////////////////////////
 
+static struct bt_gatt_exchange_params mtu_exchange_params;
+struct bt_conn *conn_connected;
+uint32_t last_write_rate;
+void (*start_scan_func)(void);
+
+static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
+			    struct bt_gatt_exchange_params *params)
+{
+	printk("%s: MTU exchange %s (%u)\n", __func__,
+	       err == 0U ? "successful" : "failed",
+	       bt_gatt_get_mtu(conn));
+}
+
+static int mtu_exchange(struct bt_conn *conn)
+{
+	int err;
+
+	printk("%s: Current MTU = %u\n", __func__, bt_gatt_get_mtu(conn));
+
+	mtu_exchange_params.func = mtu_exchange_cb;
+
+	printk("%s: Exchange MTU...\n", __func__);
+	err = bt_gatt_exchange_mtu(conn, &mtu_exchange_params);
+	if (err) {
+		printk("%s: MTU exchange failed (err %d)", __func__, err);
+	}
+
+	return err;
+}
+
+static void connected(struct bt_conn *conn, uint8_t conn_err)
+{
+	struct bt_conn_info conn_info;
+	char addr[BT_ADDR_LE_STR_LEN];
+	int err;
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	if (conn_err) {
+		printk("%s: Failed to connect to %s (%u)\n", __func__, addr,
+		       conn_err);
+		return;
+	}
+
+	err = bt_conn_get_info(conn, &conn_info);
+	if (err) {
+		printk("Failed to get connection info (%d).\n", err);
+		return;
+	}
+
+	printk("%s: %s role %u\n", __func__, addr, conn_info.role);
+
+	conn_connected = bt_conn_ref(conn);
+
+	(void)mtu_exchange(conn);
+
+#if defined(CONFIG_BT_SMP)
+	if (conn_info.role == BT_CONN_ROLE_CENTRAL) {
+		err = bt_conn_set_security(conn, BT_SECURITY_L2);
+		if (err) {
+			printk("Failed to set security (%d).\n", err);
+		}
+	}
+#endif
+}
+
+static void disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	struct bt_conn_info conn_info;
+	char addr[BT_ADDR_LE_STR_LEN];
+	int err;
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	err = bt_conn_get_info(conn, &conn_info);
+	if (err) {
+		printk("Failed to get connection info (%d).\n", err);
+		return;
+	}
+
+	printk("%s: %s role %u (reason %u)\n", __func__, addr, conn_info.role,
+	       reason);
+
+	conn_connected = NULL;
+
+	bt_conn_unref(conn);
+
+	if (conn_info.role == BT_CONN_ROLE_CENTRAL) {
+		start_scan_func();
+	}
+}
+
+static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
+{
+	printk("%s: int (0x%04x, 0x%04x) lat %u to %u\n", __func__,
+	       param->interval_min, param->interval_max, param->latency,
+	       param->timeout);
+
+	return true;
+}
+
+static void le_param_updated(struct bt_conn *conn, uint16_t interval,
+			     uint16_t latency, uint16_t timeout)
+{
+	printk("%s: int 0x%04x lat %u to %u\n", __func__, interval,
+	       latency, timeout);
+}
+
+#if defined(CONFIG_BT_SMP)
+static void security_changed(struct bt_conn *conn, bt_security_t level,
+			     enum bt_security_err err)
+{
+	printk("%s: to level %u (err %u)\n", __func__, level, err);
+}
+#endif
+
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+	.connected = connected,
+	.disconnected = disconnected,
+	.le_param_req = le_param_req,
+	.le_param_updated = le_param_updated,
+#if defined(CONFIG_BT_SMP)
+	.security_changed = security_changed,
+#endif
+};
+
+// end from gatt_write_common.c /////////////////////////////////
+
+static bool notif_enabled = false;
 static uint8_t midi_data[5]; // Buffer for MIDI messages
 
 K_FIFO_DEFINE(midi_fifo);
@@ -43,7 +169,7 @@ static struct bt_uuid_128 midi_characteristic_uuid = BT_UUID_INIT_128(BT_UUID_MI
 
 static void midi_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
-    bool notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+    notif_enabled = (value == BT_GATT_CCC_NOTIFY);
     printk("MIDI notifications %s\n", notif_enabled ? "enabled" : "disabled");
 }
 
@@ -118,44 +244,43 @@ bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t contr
 void send_midi_thread(void) 
 {
 	while(1) {
-		struct bt_conn *conn = NULL;
+        if(notif_enabled) {
+            struct bt_conn *conn = NULL;
 
-		// struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
-        // k_sem_take(&fifo_count_sem, K_NO_WAIT);
+            // struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
+            // k_sem_take(&fifo_count_sem, K_NO_WAIT);
 
-		if (conn_connected) {
-			/* Get a connection reference to ensure that a
-				* reference is maintained in case disconnected
-				* callback is called while we perform GATT Write
-				* command.
-				*/
-			conn = bt_conn_ref(conn_connected);
-		}
+            if (conn_connected) {
+                /* Get a connection reference to ensure that a
+                    * reference is maintained in case disconnected
+                    * callback is called while we perform GATT Write
+                    * command.
+                    */
+                conn = bt_conn_ref(conn_connected);
+            }
 
-		if (conn) {
-			midi_data[0] = 0;//getTimestampHighByte(thisMessage->timestampMillis);
-			midi_data[1] = 0;//getTimestampLowByte(thisMessage->timestampMillis);
+            if (conn) {
+                midi_data[0] = 0x80;//getTimestampHighByte(thisMessage->timestampMillis);
+                midi_data[1] = 0x80;//getTimestampLowByte(thisMessage->timestampMillis);
+                midi_data[2] = 0xb0;//getTimestampLowByte(thisMessage->timestampMillis);
+                midi_data[3] = 40;//getTimestampLowByte(thisMessage->timestampMillis);
+                midi_data[4] = 64;//getTimestampLowByte(thisMessage->timestampMillis);
 
-			midi_data[2] = 0xb0;//getTimestampLowByte(thisMessage->timestampMillis);
+                // for(size_t i = 0; i != thisMessage->len; i++) {
+                // 	midi_data[2+i] = thisMessage->midiBytes[i];
+                // }
 
-			midi_data[3] = 40;//getTimestampLowByte(thisMessage->timestampMillis);
+                // Send MIDI message as a notification
+                // int err = bt_gatt_notify(conn, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
+                // if (err) {
+                //     printk("Failed to send MIDI notification (err %d)\n", err);
+                // } else {
+                //     printk("Sent Notification\n");
+                // }
 
-			midi_data[4] = 64;//getTimestampLowByte(thisMessage->timestampMillis);
-			// for(size_t i = 0; i != thisMessage->len; i++) {
-			// 	midi_data[2+i] = thisMessage->midiBytes[i];
-			// }
-
-			// Send MIDI message as a notification
-			// int err = bt_gatt_write_without_response(conn_connected, midi_svc.attrs[1].handle, midi_data, sizeof(midi_data), false);
-			int err = bt_gatt_notify(conn_connected, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
-			if (err) {
-				printk("Failed to send MIDI notification (err %d)\n", err);
-			} else {
-				printk("Sent Notification\n");
-			}
-
-			bt_conn_unref(conn);			
-		}
+                bt_conn_unref(conn);			
+            }
+        }
 		
 		//k_free(thisMessage);
 

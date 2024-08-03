@@ -272,7 +272,14 @@ int main(void) {
     // setup_ppi();
 
     peripheral_gatt_write(1);
-
 }
 
-/** @} */
+/* size of stack area used by each thread */
+#define STACKSIZE 1024
+/* scheduling priority used by each thread */
+#define PRIORITY 7
+
+extern "C" void send_midi_thread(void);
+
+K_THREAD_DEFINE(send_midi_thread_id, STACKSIZE, send_midi_thread, NULL, NULL, NULL,
+		PRIORITY, 0, 0);

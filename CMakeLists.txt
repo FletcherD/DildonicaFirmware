@@ -12,7 +12,6 @@ project(dildonica)
 
 # NORDIC SDK APP START
 target_sources(app PRIVATE
-  src/gatt_write_common.c
   src/peripheral_gatt_write_midi.c
   src/dildonica.cpp
 )
