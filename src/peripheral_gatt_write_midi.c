@@ -16,8 +16,56 @@ extern int write_cmd(struct bt_conn *conn);
 extern struct bt_conn *conn_connected;
 extern uint32_t last_write_rate;
 
+static uint8_t midi_data[5]; // Buffer for MIDI messages
+
+K_FIFO_DEFINE(midi_fifo);
+#define MAX_FIFO_SIZE 10  // Maximum number of messages in FIFO
+K_SEM_DEFINE(fifo_count_sem, 0, MAX_FIFO_SIZE);
+
+struct MidiMessage {
+	uint16_t timestampMillis;
+	uint8_t midiBytes[4];
+	uint8_t len;
+};
+
+uint8_t getTimestampHighByte(uint16_t timestampMillis) {
+	return (timestampMillis >> 7) 	& 0b0111111;
+}
+uint8_t getTimestampLowByte(uint16_t timestampMillis) {
+	return (timestampMillis) 		& 0b1111111;
+}
+
+#define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700)
+static struct bt_uuid_128 midi_service_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_SERVICE);
+
+#define BT_UUID_MIDI_CHARACTERISTIC BT_UUID_128_ENCODE(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3)
+static struct bt_uuid_128 midi_characteristic_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_CHARACTERISTIC);
+
+static void midi_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+    bool notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+    printk("MIDI notifications %s\n", notif_enabled ? "enabled" : "disabled");
+}
+
+static ssize_t read_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                         void *buf, uint16_t len, uint16_t offset)
+{
+    printk("MIDI read request\n");
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, midi_data, sizeof(midi_data));
+}
+
+BT_GATT_SERVICE_DEFINE(midi_svc,
+    BT_GATT_PRIMARY_SERVICE(&midi_service_uuid),
+    BT_GATT_CHARACTERISTIC(&midi_characteristic_uuid.uuid,
+                           BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP | BT_GATT_CHRC_NOTIFY,
+                           BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
+                           read_midi, NULL, NULL),
+	BT_GATT_CCC(midi_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+);
+
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MIDI_SERVICE),
 };
 
 static const struct bt_data sd[] = {
@@ -48,6 +96,74 @@ static struct bt_gatt_cb gatt_callbacks = {
 	.att_mtu_updated = mtu_updated
 };
 
+
+bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
+{
+	if (k_sem_count_get(&fifo_count_sem) >= MAX_FIFO_SIZE) {
+		return false;
+	}
+	struct MidiMessage *thisMessage = k_malloc(sizeof(struct MidiMessage));
+	thisMessage->timestampMillis = timestamp;
+	thisMessage->midiBytes[0] = 0xB0 | (channel & 0x0F);
+	thisMessage->midiBytes[1] = controller & 0x7F;
+	thisMessage->midiBytes[2] = value & 0x7F;
+	thisMessage->len = 3;
+
+	k_fifo_put(&midi_fifo, thisMessage);
+    k_sem_give(&fifo_count_sem);
+	return true;
+}
+
+
+void send_midi_thread(void) 
+{
+	while(1) {
+		struct bt_conn *conn = NULL;
+
+		// struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
+        // k_sem_take(&fifo_count_sem, K_NO_WAIT);
+
+		if (conn_connected) {
+			/* Get a connection reference to ensure that a
+				* reference is maintained in case disconnected
+				* callback is called while we perform GATT Write
+				* command.
+				*/
+			conn = bt_conn_ref(conn_connected);
+		}
+
+		if (conn) {
+			midi_data[0] = 0;//getTimestampHighByte(thisMessage->timestampMillis);
+			midi_data[1] = 0;//getTimestampLowByte(thisMessage->timestampMillis);
+
+			midi_data[2] = 0xb0;//getTimestampLowByte(thisMessage->timestampMillis);
+
+			midi_data[3] = 40;//getTimestampLowByte(thisMessage->timestampMillis);
+
+			midi_data[4] = 64;//getTimestampLowByte(thisMessage->timestampMillis);
+			// for(size_t i = 0; i != thisMessage->len; i++) {
+			// 	midi_data[2+i] = thisMessage->midiBytes[i];
+			// }
+
+			// Send MIDI message as a notification
+			// int err = bt_gatt_write_without_response(conn_connected, midi_svc.attrs[1].handle, midi_data, sizeof(midi_data), false);
+			int err = bt_gatt_notify(conn_connected, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
+			if (err) {
+				printk("Failed to send MIDI notification (err %d)\n", err);
+			} else {
+				printk("Sent Notification\n");
+			}
+
+			bt_conn_unref(conn);			
+		}
+		
+		//k_free(thisMessage);
+
+		k_sleep(K_SECONDS(1));
+	}
+}
+
+
 uint32_t peripheral_gatt_write(uint32_t count)
 {
 	int err;
@@ -55,7 +171,7 @@ uint32_t peripheral_gatt_write(uint32_t count)
 	err = bt_enable(NULL);
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
-		return 0U;
+		return;
 	}
 
 	printk("Bluetooth initialized\n");
@@ -69,13 +185,10 @@ uint32_t peripheral_gatt_write(uint32_t count)
 	err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 	if (err) {
 		printk("Advertising failed to start (err %d)\n", err);
-		return 0U;
+		return;
 	}
 
 	printk("Advertising successfully started\n");
 
 	conn_connected = NULL;
-	last_write_rate = 0U;
-
-	return last_write_rate;
 }
