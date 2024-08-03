@@ -1,0 +1,29 @@
+// To get started, press Ctrl+Space to bring up the completion menu and view the available nodes.
+
+// You can also use the buttons in the sidebar to perform actions on nodes.
+// Actions currently available include:
+
+// * Enabling / disabling the node
+// * Adding the bus to a bus
+// * Removing the node
+// * Connecting ADC channels
+
+// For more help, browse the DeviceTree documentation at https://docs.zephyrproject.org/latest/guides/dts/index.html
+// You can also visit the nRF DeviceTree extension documentation at https://docs.nordicsemi.com/bundle/nrf-connect-vscode/page/guides/ncs_configure_app.html#devicetree-support-in-the-extension
+
+/ {
+	zephyr,user {
+		dildonica_osc_in-gpios = <&gpio0 4 0>;
+		dildonica_zone_select-gpios = <&gpio1 12 0>, <&gpio1 15 0>, <&gpio1 13 0>, <&gpio1 14 0>, <&gpio0 23 0>, <&gpio0 21 0>, <&gpio0 27 0>, <&gpio1 2 0>;
+	};
+};
+
+
+&adc {
+	status = "disabled";
+};
+
+&comp {
+	status = "okay";
+};
+

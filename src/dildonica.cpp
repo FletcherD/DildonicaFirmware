@@ -97,50 +97,6 @@ char ( &_ArraySizeHelper( T (&array)[N] ))[N];
 #define mycountof( array ) (sizeof( _ArraySizeHelper( array ) ))
 
 
-/* UARTE *///////////////////////////////
-
-/** @brief Symbol specifying UARTE instance to be used. */
-#define UARTE_INST_IDX 1
-
-/** @brief Symbol specifying TX pin number of UARTE. */
-#define UARTE_TX_PIN NRF_GPIO_PIN_MAP(0,24)
-
-/** @brief Symbol specifying RX pin number of UARTE. */
-#define UARTE_RX_PIN NRF_GPIO_PIN_MAP(0,25)
-
-nrfx_uarte_t uarte_inst = NRFX_UARTE_INSTANCE(UARTE_INST_IDX);
-
-static void uarte_handler(nrfx_uarte_event_t const * p_event, void * p_context)
-{
-}
-
-void setup_uarte() {
-
-#if defined(__ZEPHYR__)
-    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_UARTE_INST_GET(UARTE_INST_IDX)), IRQ_PRIO_LOWEST,
-                NRFX_UARTE_INST_HANDLER_GET(UARTE_INST_IDX), 0, 0);
-#endif
-
-    nrfx_uarte_config_t uarte_config = NRFX_UARTE_DEFAULT_CONFIG(UARTE_TX_PIN, UARTE_RX_PIN);
-    uarte_config.p_context = &uarte_inst;
-    uarte_config.baudrate = NRF_UARTE_BAUDRATE_1000000;
-    nrfx_uarte_init(&uarte_inst, &uarte_config, uarte_handler);
-}
-
-void printf_uart( const char* format, ... ) {
-    static uint8_t tx_buffer[64];
-    va_list arglist;
-    va_start( arglist, format );
-    size_t len = vsprintf( (char*)tx_buffer, format, arglist );
-    va_end( arglist );
-
-    nrfx_uarte_tx(&uarte_inst, tx_buffer, len, 0);
-}
-
-
-/* UARTE *///////////////////////////////
-
-
 void setDildonicaZoneActiveMask(uint8_t zoneMask) {
     for (uint8_t i = 0; i != 8; i++) {
         bool pinState = ((1 << i) & zoneMask);
@@ -304,57 +260,19 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_COUNTER);
 }
 
+extern "C" uint32_t peripheral_gatt_write(uint32_t);
 
 int main(void) {
-    setup_uarte();
+    // setup_uarte();
 
-    setup_gpio();
-    setup_timers();
+    // setup_gpio();
+    // setup_timers();
 
-    setup_comparator();
-    setup_ppi();
+    // setup_comparator();
+    // setup_ppi();
 
-    setup_bluetooth_peripheral();
+    peripheral_gatt_write(1);
 
-    printf_uart("Hello Dildonica\r\n");
-
-    while (1) {
-        if (!dildonicaSampleQueue.is_empty()) {
-
-            DildonicaSampleRaw dSample = dildonicaSampleQueue.dequeue();
-
-            DildonicaZoneState& zoneState = dildonicaZoneStates[dSample.zone];
-            updateDildonicaZone(zoneState, dSample);
-
-            //gpio_pin_set_dt(&PIN_LED0, dSample.cyclePeriod & 1);
-
-            uint32_t timestampMillis = dSample.timestamp / (TICKS_PER_MILLISECOND); 
-
-            //printf_uart("%d, %d, %0.9f\r\n", dSample.zone, dSample.cyclePeriod, zoneState.valueNormalized);
-            printf_uart("%d, %d, %d\r\n", dSample.zone, timestampMillis, dSample.cyclePeriod);
-
-            int32_t midiControlValue = lround(zoneState.valueNormalized * DILDONICA_MIDI_CONTROL_SLOPE) + 63;
-            midiControlValue = (midiControlValue < 0 ? 0 : (midiControlValue > 127 ? 127 : midiControlValue));
-            if(midiControlValue != zoneState.midiControlValue) {
-                //send_midi_control_change(timestampMillis, 0, DILDONICA_MIDI_CONTROL_START + dSample.zone, midiControlValue);
-                zoneState.midiControlValue = midiControlValue;
-                gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
-            }
-
-            // if(dSampleZone == DILDONICA_N_ZONES-1) {
-            //     uint32_t colorR = abs(10000. * (dildonicaZoneStates[0].valueNormalized + dildonicaZoneStates[1].valueNormalized + dildonicaZoneStates[2].valueNormalized));
-            //     colorR = min(255, colorR);
-            //     uint32_t colorG = abs(10000. * (dildonicaZoneStates[3].valueNormalized + dildonicaZoneStates[4].valueNormalized));
-            //     colorG = min(255, colorG);
-            //     uint32_t colorB = abs(10000. * (dildonicaZoneStates[5].valueNormalized + dildonicaZoneStates[6].valueNormalized + dildonicaZoneStates[7].valueNormalized));
-            //     colorB = min(255, colorB);
-            //     rgbLed.setPixelColor(0, colorR, colorG, colorB);
-            //     rgbLed.show();
-            // }
-        }
-
-        k_yield();
-    }
 }
 
 /** @} */
