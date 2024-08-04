@@ -8,11 +8,13 @@ extern "C" {
     #include <zephyr/bluetooth/gatt.h>
 }
 
-extern "C" bool notif_enabled;
-extern "C" struct bt_conn *conn_connected;
-extern "C" uint8_t midi_data[5];
+#include "bluetooth_midi.hpp"
 
-extern "C" struct bt_gatt_service_static midi_svc;
+extern bool notif_enabled;
+extern struct bt_conn *conn_connected;
+extern uint8_t midi_data[5];
+
+extern const bt_gatt_service_static midi_svc;
 
 struct MidiMessage {
 	uint8_t timestampHi;
@@ -21,7 +23,7 @@ struct MidiMessage {
 	uint8_t midiLen;
 };
 
-CircularQueue<MidiMessage, 16> midiMessageQueue;
+static CircularQueue<MidiMessage, 16> midiMessageQueue;
 
 uint8_t getTimestampHighByte(uint16_t timestampMillis) {
 	return 0x80 | ((timestampMillis >> 7) 	& 0b0111111);

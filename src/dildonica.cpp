@@ -259,7 +259,7 @@ void setup_timers() {
 }
 
 extern bool send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
-extern "C" void setup_bluetooth_peripheral();
+extern void setup_bluetooth_peripheral();
 
 int main(void) {
     setup_gpio();

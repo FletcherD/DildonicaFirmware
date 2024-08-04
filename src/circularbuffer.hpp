@@ -25,11 +25,11 @@ public:
         size++;
     }
 
-    T dequeue() {
+    T& dequeue() {
         if (is_empty()) {
             while(1){};
         }
-        T item = buffer[front];
+        T& item = buffer[front];
         front = (front + 1) % CAPACITY;
         size--;
         return item;

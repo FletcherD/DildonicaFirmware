@@ -7,9 +7,13 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#include <zephyr/bluetooth/bluetooth.h>
-#include <zephyr/bluetooth/conn.h>
-#include <zephyr/bluetooth/gatt.h>
+extern "C" {
+    #include <zephyr/bluetooth/bluetooth.h>
+    #include <zephyr/bluetooth/conn.h>
+    #include <zephyr/bluetooth/gatt.h>
+}
+
+#include "bluetooth_cpp_compat.hpp"
 
 // from gatt_write_common.c /////////////////////////////////
 
@@ -143,6 +147,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 bool notif_enabled = false;
 uint8_t midi_data[5] = {0x80, 0x80, 0, 0, 0}; // Buffer for MIDI messages
+
+extern const struct bt_gatt_service_static midi_svc;
 
 #define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700)
 static struct bt_uuid_128 midi_service_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_SERVICE);

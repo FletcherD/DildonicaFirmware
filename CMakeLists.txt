@@ -10,7 +10,7 @@ project(dildonica)
 
 # NORDIC SDK APP START
 target_sources(app PRIVATE
-  src/bluetooth_peripheral_gatt.c
+  src/bluetooth_peripheral_gatt.cpp
   src/bluetooth_midi.cpp
   src/dildonica.cpp
 )
