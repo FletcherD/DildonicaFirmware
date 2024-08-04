@@ -86,8 +86,6 @@ const uint8_t DILDONICA_MIDI_CONTROL_START = 41;
 // This is: Units of MIDI Control Change for a 100% change in cycle period
 const float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
 
-extern "C" bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
-extern "C" void setup_bluetooth_peripheral();
 
 uint32_t led_test = 0;
 
@@ -259,6 +257,9 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_TIMER);
     nrfx_timer_enable(&TIMER_D_COUNTER);
 }
+
+extern "C" bool send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
+extern "C" void setup_bluetooth_peripheral();
 
 int main(void) {
     // setup_uarte();
