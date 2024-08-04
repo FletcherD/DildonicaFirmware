@@ -86,7 +86,7 @@ const uint8_t DILDONICA_MIDI_CONTROL_START = 41;
 // This is: Units of MIDI Control Change for a 100% change in cycle period
 const float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
 
-extern "C" void send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
+extern "C" bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
 extern "C" void setup_bluetooth_peripheral();
 
 uint32_t led_test = 0;
@@ -260,8 +260,6 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_COUNTER);
 }
 
-extern "C" uint32_t peripheral_gatt_write(uint32_t);
-
 int main(void) {
     // setup_uarte();
 
@@ -271,7 +269,18 @@ int main(void) {
     // setup_comparator();
     // setup_ppi();
 
-    peripheral_gatt_write(1);
+    setup_bluetooth_peripheral();
+}
+
+void dildonica_thread(void) 
+{
+//     uint32_t counter = 0;
+//     uint8_t value = 0;
+//     while(1) {
+//         if(counter++ % 16000 == 0) {
+//             send_midi_control_change(0, 0, 40, value++);
+//         }
+//     }
 }
 
 /* size of stack area used by each thread */
@@ -283,3 +292,5 @@ extern "C" void send_midi_thread(void);
 
 K_THREAD_DEFINE(send_midi_thread_id, STACKSIZE, send_midi_thread, NULL, NULL, NULL,
 		PRIORITY, 0, 0);
+// K_THREAD_DEFINE(dildonica_thread_id, STACKSIZE, dildonica_thread, NULL, NULL, NULL,
+// 		PRIORITY, 0, 0);

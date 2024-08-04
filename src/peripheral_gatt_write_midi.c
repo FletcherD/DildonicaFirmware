@@ -142,23 +142,24 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 // end from gatt_write_common.c /////////////////////////////////
 
 static bool notif_enabled = false;
-static uint8_t midi_data[5]; // Buffer for MIDI messages
+static uint8_t midi_data[5] = {0x80, 0x80, 0, 0, 0}; // Buffer for MIDI messages
 
 K_FIFO_DEFINE(midi_fifo);
 #define MAX_FIFO_SIZE 10  // Maximum number of messages in FIFO
 K_SEM_DEFINE(fifo_count_sem, 0, MAX_FIFO_SIZE);
 
 struct MidiMessage {
-	uint16_t timestampMillis;
-	uint8_t midiBytes[4];
-	uint8_t len;
+	uint8_t timestampHi;
+	uint8_t timestampLo;
+	uint8_t midiBytes[3];
+	uint8_t midiLen;
 };
 
 uint8_t getTimestampHighByte(uint16_t timestampMillis) {
-	return (timestampMillis >> 7) 	& 0b0111111;
+	return 0x80 | ((timestampMillis >> 7) 	& 0b0111111);
 }
 uint8_t getTimestampLowByte(uint16_t timestampMillis) {
-	return (timestampMillis) 		& 0b1111111;
+	return 0x80 | (timestampMillis 		    & 0b1111111);
 }
 
 #define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700)
@@ -229,11 +230,12 @@ bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t contr
 		return false;
 	}
 	struct MidiMessage *thisMessage = k_malloc(sizeof(struct MidiMessage));
-	thisMessage->timestampMillis = timestamp;
+	thisMessage->timestampHi = getTimestampHighByte(timestamp);
+	thisMessage->timestampLo = getTimestampLowByte(timestamp);
 	thisMessage->midiBytes[0] = 0xB0 | (channel & 0x0F);
 	thisMessage->midiBytes[1] = controller & 0x7F;
 	thisMessage->midiBytes[2] = value & 0x7F;
-	thisMessage->len = 3;
+	thisMessage->midiLen = 3;
 
 	k_fifo_put(&midi_fifo, thisMessage);
     k_sem_give(&fifo_count_sem);
@@ -243,12 +245,14 @@ bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t contr
 
 void send_midi_thread(void) 
 {
+	uint16_t timestamp = 0;
+	uint8_t value = 0;
 	while(1) {
+		// struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
+		// k_sem_take(&fifo_count_sem, K_NO_WAIT);
+
         if(notif_enabled) {
             struct bt_conn *conn = NULL;
-
-            // struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
-            // k_sem_take(&fifo_count_sem, K_NO_WAIT);
 
             if (conn_connected) {
                 /* Get a connection reference to ensure that a
@@ -260,36 +264,48 @@ void send_midi_thread(void)
             }
 
             if (conn) {
-                midi_data[0] = 0x80;//getTimestampHighByte(thisMessage->timestampMillis);
-                midi_data[1] = 0x80;//getTimestampLowByte(thisMessage->timestampMillis);
-                midi_data[2] = 0xb0;//getTimestampLowByte(thisMessage->timestampMillis);
-                midi_data[3] = 40;//getTimestampLowByte(thisMessage->timestampMillis);
-                midi_data[4] = 64;//getTimestampLowByte(thisMessage->timestampMillis);
+				uint8_t dataLen = 0;
 
-                // for(size_t i = 0; i != thisMessage->len; i++) {
-                // 	midi_data[2+i] = thisMessage->midiBytes[i];
+				//uint8_t timestampHi = thisMessage->timestampHi;
+                midi_data[0] = getTimestampHighByte(timestamp);
+
+                midi_data[1] = getTimestampLowByte(timestamp);
+
+				midi_data[2] = 0xb0;
+				midi_data[3] = 40;
+				midi_data[4] = (value & 0x7F);
+                // for(size_t i = 0; i != thisMessage->midiLen; i++) {
+                // 	midi_data[dataLen++] = thisMessage->midiBytes[i];
                 // }
 
-                // Send MIDI message as a notification
-                // int err = bt_gatt_notify(conn, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
-                // if (err) {
-                //     printk("Failed to send MIDI notification (err %d)\n", err);
-                // } else {
-                //     printk("Sent Notification\n");
-                // }
+				// while(!k_fifo_is_empty(midi_fifo) {
+
+				// })
+
+                //Send MIDI message as a notification
+                int err = bt_gatt_notify(conn, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
+                if (err) {
+                    printk("Failed to send MIDI notification (err %d)\n", err);
+                } else {
+                    printk("Sent Notification\n");
+                }
 
                 bt_conn_unref(conn);			
             }
+
         }
 		
 		//k_free(thisMessage);
 
-		k_sleep(K_SECONDS(1));
+		k_sleep(K_MSEC(500));
+		timestamp = (timestamp+500)%8192;
+		value++;
 	}
 }
 
+// TODO: Fix MTU exchange!
 
-uint32_t peripheral_gatt_write(uint32_t count)
+void setup_bluetooth_peripheral()
 {
 	int err;
 
@@ -316,4 +332,12 @@ uint32_t peripheral_gatt_write(uint32_t count)
 	printk("Advertising successfully started\n");
 
 	conn_connected = NULL;
+
+	uint16_t timestamp = 0;
+	uint8_t value = 0;
+	// while(true) {
+	// 	send_midi_control_change(timestamp, 0, 40, value++);
+	// 	k_sleep(K_MSEC(500));
+	// 	timestamp = (timestamp+500)%(1<<13);
+	// }
 }
