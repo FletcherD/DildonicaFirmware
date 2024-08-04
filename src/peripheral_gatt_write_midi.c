@@ -224,12 +224,13 @@ static struct bt_gatt_cb gatt_callbacks = {
 };
 
 
-bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
+bool send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
 {
 	if (k_sem_count_get(&fifo_count_sem) >= MAX_FIFO_SIZE) {
 		return false;
 	}
 	struct MidiMessage *thisMessage = k_malloc(sizeof(struct MidiMessage));
+	timestamp = timestamp % (1<<13);
 	thisMessage->timestampHi = getTimestampHighByte(timestamp);
 	thisMessage->timestampLo = getTimestampLowByte(timestamp);
 	thisMessage->midiBytes[0] = 0xB0 | (channel & 0x0F);
@@ -245,11 +246,9 @@ bool send_midi_control_change(uint16_t timestamp, uint8_t channel, uint8_t contr
 
 void send_midi_thread(void) 
 {
-	uint16_t timestamp = 0;
-	uint8_t value = 0;
 	while(1) {
-		// struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
-		// k_sem_take(&fifo_count_sem, K_NO_WAIT);
+		struct MidiMessage *thisMessage = k_fifo_get(&midi_fifo, K_FOREVER);
+		k_sem_take(&fifo_count_sem, K_NO_WAIT);
 
         if(notif_enabled) {
             struct bt_conn *conn = NULL;
@@ -264,16 +263,16 @@ void send_midi_thread(void)
             }
 
             if (conn) {
-				uint8_t dataLen = 0;
+				size_t dataLen = 0;
 
 				//uint8_t timestampHi = thisMessage->timestampHi;
-                midi_data[0] = getTimestampHighByte(timestamp);
+                midi_data[dataLen++] = thisMessage->timestampHi;
 
-                midi_data[1] = getTimestampLowByte(timestamp);
+                midi_data[dataLen++] = thisMessage->timestampLo;
 
-				midi_data[2] = 0xb0;
-				midi_data[3] = 40;
-				midi_data[4] = (value & 0x7F);
+				midi_data[dataLen++] = thisMessage->midiBytes[0];
+				midi_data[dataLen++] = thisMessage->midiBytes[1];
+				midi_data[dataLen++] = thisMessage->midiBytes[2];
                 // for(size_t i = 0; i != thisMessage->midiLen; i++) {
                 // 	midi_data[dataLen++] = thisMessage->midiBytes[i];
                 // }
@@ -295,11 +294,8 @@ void send_midi_thread(void)
 
         }
 		
-		//k_free(thisMessage);
+		k_free(thisMessage);
 
-		k_sleep(K_MSEC(500));
-		timestamp = (timestamp+500)%8192;
-		value++;
 	}
 }
 
@@ -333,11 +329,10 @@ void setup_bluetooth_peripheral()
 
 	conn_connected = NULL;
 
-	uint16_t timestamp = 0;
 	uint8_t value = 0;
-	// while(true) {
-	// 	send_midi_control_change(timestamp, 0, 40, value++);
-	// 	k_sleep(K_MSEC(500));
-	// 	timestamp = (timestamp+500)%(1<<13);
-	// }
+	while(true) {
+		uint32_t timestamp = k_uptime_get();
+		send_midi_control_change(timestamp, 0, 40, value++);
+		k_sleep(K_MSEC(500));
+	}
 }
