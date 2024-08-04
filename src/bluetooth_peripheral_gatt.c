@@ -11,53 +11,12 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 
+// from gatt_write_common.c /////////////////////////////////
+
 static struct bt_gatt_exchange_params mtu_exchange_params;
-static uint32_t write_count;
-static uint32_t write_len;
-static uint32_t write_rate;
 struct bt_conn *conn_connected;
 uint32_t last_write_rate;
 void (*start_scan_func)(void);
-
-static void write_cmd_cb(struct bt_conn *conn, void *user_data)
-{
-	static uint32_t cycle_stamp;
-	uint64_t delta;
-
-	delta = k_cycle_get_32() - cycle_stamp;
-	delta = k_cyc_to_ns_floor64(delta);
-
-	if (delta == 0) {
-		/* Skip division by zero */
-		return;
-	}
-
-	/* if last data rx-ed was greater than 1 second in the past,
-	 * reset the metrics.
-	 */
-	if (delta > (1U * NSEC_PER_SEC)) {
-		printk("%s: count= %u, len= %u, rate= %u bps.\n", __func__,
-		       write_count, write_len, write_rate);
-
-		last_write_rate = write_rate;
-
-		write_count = 0U;
-		write_len = 0U;
-		write_rate = 0U;
-		cycle_stamp = k_cycle_get_32();
-	} else {
-		uint16_t len;
-
-		write_count++;
-
-		/* Extract the 16-bit data length stored in user_data */
-		len = (uint32_t)user_data & 0xFFFF;
-
-		write_len += len;
-		write_rate = ((uint64_t)write_len << 3) * (1U * NSEC_PER_SEC) /
-			     delta;
-	}
-}
 
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
 			    struct bt_gatt_exchange_params *params)
@@ -180,52 +139,100 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 #endif
 };
 
-int write_cmd(struct bt_conn *conn)
+// end from gatt_write_common.c /////////////////////////////////
+
+bool notif_enabled = false;
+uint8_t midi_data[5] = {0x80, 0x80, 0, 0, 0}; // Buffer for MIDI messages
+
+#define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700)
+static struct bt_uuid_128 midi_service_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_SERVICE);
+
+#define BT_UUID_MIDI_CHARACTERISTIC BT_UUID_128_ENCODE(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3)
+static struct bt_uuid_128 midi_characteristic_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_CHARACTERISTIC);
+
+static void midi_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
-	static uint8_t data[BT_ATT_MAX_ATTRIBUTE_LEN] = {0, };
-	static uint16_t data_len;
-	uint16_t data_len_max;
+    notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+    printk("MIDI notifications %s\n", notif_enabled ? "enabled" : "disabled");
+}
+
+static ssize_t read_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                         void *buf, uint16_t len, uint16_t offset)
+{
+    printk("MIDI read request\n");
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, midi_data, sizeof(midi_data));
+}
+
+BT_GATT_SERVICE_DEFINE(midi_svc,
+    BT_GATT_PRIMARY_SERVICE(&midi_service_uuid),
+    BT_GATT_CHARACTERISTIC(&midi_characteristic_uuid.uuid,
+                           BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP | BT_GATT_CHRC_NOTIFY,
+                           BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
+                           read_midi, NULL, NULL),
+	BT_GATT_CCC(midi_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+);
+
+static const struct bt_data ad[] = {
+	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_MIDI_SERVICE),
+};
+
+static const struct bt_data sd[] = {
+	BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1),
+};
+
+static void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx)
+{
+	printk("Updated MTU: TX: %d RX: %d bytes\n", tx, rx);
+}
+
+#if defined(CONFIG_BT_SMP)
+static void auth_cancel(struct bt_conn *conn)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	printk("Pairing cancelled: %s\n", addr);
+}
+
+static struct bt_conn_auth_cb auth_callbacks = {
+	.cancel = auth_cancel,
+};
+#endif /* CONFIG_BT_SMP */
+
+static struct bt_gatt_cb gatt_callbacks = {
+	.att_mtu_updated = mtu_updated
+};
+
+
+// TODO: Fix MTU exchange!
+
+void setup_bluetooth_peripheral()
+{
 	int err;
 
-	data_len_max = bt_gatt_get_mtu(conn) - 3;
-	if (data_len_max > BT_ATT_MAX_ATTRIBUTE_LEN) {
-		data_len_max = BT_ATT_MAX_ATTRIBUTE_LEN;
-	}
-
-#if TEST_FRAGMENTATION_WITH_VARIABLE_LENGTH_DATA
-	/* Use incremental length data for every write command */
-	/* TODO: Include test case in BabbleSim tests */
-	static bool decrement;
-
-	if (decrement) {
-		data_len--;
-		if (data_len <= 1) {
-			data_len = 1;
-			decrement = false;
-		}
-	} else {
-		data_len++;
-		if (data_len >= data_len_max) {
-			data_len = data_len_max;
-			decrement = true;
-		}
-	}
-#else
-	/* Use fixed length data for every write command */
-	data_len = data_len_max;
-#endif
-
-	/* Pass the 16-bit data length value (instead of reference) in
-	 * user_data so that unique value is pass for each write callback.
-	 * Using handle 0x0001, we do not care if it is writable, we just want
-	 * to transmit the data across.
-	 */
-	err = bt_gatt_write_without_response_cb(conn, 0x0001, data, data_len,
-						false, write_cmd_cb,
-						(void *)((uint32_t)data_len));
+	err = bt_enable(NULL);
 	if (err) {
-		printk("%s: Write cmd failed (%d).\n", __func__, err);
+		printk("Bluetooth init failed (err %d)\n", err);
+		return;
 	}
 
-	return err;
+	printk("Bluetooth initialized\n");
+
+	bt_gatt_cb_register(&gatt_callbacks);
+
+#if defined(CONFIG_BT_SMP)
+	(void)bt_conn_auth_cb_register(&auth_callbacks);
+#endif /* CONFIG_BT_SMP */
+
+	err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	if (err) {
+		printk("Advertising failed to start (err %d)\n", err);
+		return;
+	}
+
+	printk("Advertising successfully started\n");
+
+	conn_connected = NULL;
 }

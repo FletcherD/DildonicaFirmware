@@ -19,9 +19,9 @@ public:
     void enqueue(const T& item) {
         buffer[rear] = item;
         rear = (rear + 1) % CAPACITY;
-       if (is_full()) {
-           return;
-       }
+        if (is_full()) {
+            return;
+        }
         size++;
     }
 
