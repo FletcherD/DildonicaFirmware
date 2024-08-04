@@ -262,26 +262,17 @@ extern "C" bool send_midi_control_change(uint32_t timestamp, uint8_t channel, ui
 extern "C" void setup_bluetooth_peripheral();
 
 int main(void) {
-    // setup_uarte();
+    setup_gpio();
+    setup_timers();
 
-    // setup_gpio();
-    // setup_timers();
-
-    // setup_comparator();
-    // setup_ppi();
+    setup_comparator();
+    setup_ppi();
 
     setup_bluetooth_peripheral();
 }
 
 void dildonica_thread(void) 
 {
-//     uint32_t counter = 0;
-//     uint8_t value = 0;
-//     while(1) {
-//         if(counter++ % 16000 == 0) {
-//             send_midi_control_change(0, 0, 40, value++);
-//         }
-//     }
 }
 
 /* size of stack area used by each thread */
