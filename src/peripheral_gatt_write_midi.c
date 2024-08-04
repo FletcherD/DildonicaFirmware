@@ -328,11 +328,4 @@ void setup_bluetooth_peripheral()
 	printk("Advertising successfully started\n");
 
 	conn_connected = NULL;
-
-	uint8_t value = 0;
-	while(true) {
-		uint32_t timestamp = k_uptime_get();
-		send_midi_control_change(timestamp, 0, 40, value++);
-		k_sleep(K_MSEC(500));
-	}
 }

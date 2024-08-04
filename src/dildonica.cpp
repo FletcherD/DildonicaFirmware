@@ -273,6 +273,32 @@ int main(void) {
 
 void dildonica_thread(void) 
 {
+    while(1) {
+        uint8_t value = 0;
+        if(!dildonicaSampleQueue.is_empty()) {
+            gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
+
+            DildonicaSampleRaw dSample = dildonicaSampleQueue.dequeue();
+
+            uint8_t dSampleZone = dSample.zone;
+            DildonicaZoneState& zoneState = dildonicaZoneStates[dSampleZone];
+
+            updateDildonicaZone(zoneState, dSample);
+
+            //Serial.printf("%d, %d, %0.9f\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
+            //static char message[64];
+            //size_t message_len = sprintf(message, "%d, %d, %0.9f\r\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
+            //serialWrite((uint8_t *) message, message_len);
+
+            uint32_t timestampMillis = dSample.timestamp / TICKS_PER_MILLISECOND;
+
+            int32_t midiControlValue = lround(zoneState.valueNormalized * DILDONICA_MIDI_CONTROL_SLOPE) + 63;
+            midiControlValue = (midiControlValue < 0) ? 0 : ((midiControlValue > 127) ? 127 : midiControlValue);
+            send_midi_control_change(timestampMillis, 0, DILDONICA_MIDI_CONTROL_START + dSampleZone, midiControlValue);
+        }
+
+        k_yield();
+    }
 }
 
 /* size of stack area used by each thread */
@@ -284,5 +310,5 @@ extern "C" void send_midi_thread(void);
 
 K_THREAD_DEFINE(send_midi_thread_id, STACKSIZE, send_midi_thread, NULL, NULL, NULL,
 		PRIORITY, 0, 0);
-// K_THREAD_DEFINE(dildonica_thread_id, STACKSIZE, dildonica_thread, NULL, NULL, NULL,
-// 		PRIORITY, 0, 0);
+K_THREAD_DEFINE(dildonica_thread_id, STACKSIZE, dildonica_thread, NULL, NULL, NULL,
+		PRIORITY, 0, 0);
