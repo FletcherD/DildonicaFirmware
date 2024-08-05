@@ -1,7 +1,7 @@
 #ifndef BLUETOOTH_CPP_COMPAT_HPP
 #define BLUETOOTH_CPP_COMPAT_HPP
 
-#include <zephyr/bluetooth/bluetooth.h>=
+#include <zephyr/bluetooth/bluetooth.h>
 
 #ifdef __cplusplus
 extern "C" {

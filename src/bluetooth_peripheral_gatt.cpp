@@ -20,7 +20,7 @@ extern "C" {
 static struct bt_gatt_exchange_params mtu_exchange_params;
 struct bt_conn *conn_connected;
 uint32_t last_write_rate;
-void (*start_scan_func)(void);
+void (*start_scan_func)();
 
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
 			    struct bt_gatt_exchange_params *params)
@@ -49,7 +49,7 @@ static int mtu_exchange(struct bt_conn *conn)
 
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
-	struct bt_conn_info conn_info;
+	struct bt_conn_info conn_info{};
 	char addr[BT_ADDR_LE_STR_LEN];
 	int err;
 
@@ -85,7 +85,7 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
-	struct bt_conn_info conn_info;
+	struct bt_conn_info conn_info{};
 	char addr[BT_ADDR_LE_STR_LEN];
 	int err;
 
@@ -100,7 +100,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	printk("%s: %s role %u (reason %u)\n", __func__, addr, conn_info.role,
 	       reason);
 
-	conn_connected = NULL;
+	conn_connected = nullptr;
 
 	bt_conn_unref(conn);
 
@@ -146,27 +146,35 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 // end from gatt_write_common.c /////////////////////////////////
 
 bool notif_enabled = false;
-uint8_t midi_data[5] = {0x80, 0x80, 0, 0, 0}; // Buffer for MIDI messages
+
+uint8_t midi_data[17] = {0x80, 0x80, 0, 0, 0}; // Buffer for MIDI messages
 
 extern const struct bt_gatt_service_static midi_svc;
 
 #define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700)
-static struct bt_uuid_128 midi_service_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_SERVICE);
+struct bt_uuid_128 midi_service_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_SERVICE);
 
 #define BT_UUID_MIDI_CHARACTERISTIC BT_UUID_128_ENCODE(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3)
-static struct bt_uuid_128 midi_characteristic_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_CHARACTERISTIC);
+struct bt_uuid_128 midi_characteristic_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_CHARACTERISTIC);
 
-static void midi_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+void midi_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
     notif_enabled = (value == BT_GATT_CCC_NOTIFY);
     printk("MIDI notifications %s\n", notif_enabled ? "enabled" : "disabled");
 }
 
-static ssize_t read_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+ssize_t read_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                          void *buf, uint16_t len, uint16_t offset)
 {
     printk("MIDI read request\n");
     return bt_gatt_attr_read(conn, attr, buf, len, offset, midi_data, sizeof(midi_data));
+}
+
+ssize_t write_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                          const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
+{
+    printk("MIDI write request (ignored)\n");
+    return 1; // Always return 1 to acknowledge the write
 }
 
 BT_GATT_SERVICE_DEFINE(midi_svc,
@@ -174,7 +182,7 @@ BT_GATT_SERVICE_DEFINE(midi_svc,
     BT_GATT_CHARACTERISTIC(&midi_characteristic_uuid.uuid,
                            BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP | BT_GATT_CHRC_NOTIFY,
                            BT_GATT_PERM_READ | BT_GATT_PERM_WRITE,
-                           read_midi, NULL, NULL),
+                           read_midi, write_midi, nullptr),
 	BT_GATT_CCC(midi_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
@@ -218,7 +226,7 @@ void setup_bluetooth_peripheral()
 {
 	int err;
 
-	err = bt_enable(NULL);
+	err = bt_enable(nullptr);
 	if (err) {
 		printk("Bluetooth init failed (err %d)\n", err);
 		return;
@@ -240,5 +248,5 @@ void setup_bluetooth_peripheral()
 
 	printk("Advertising successfully started\n");
 
-	conn_connected = NULL;
+	conn_connected = nullptr;
 }

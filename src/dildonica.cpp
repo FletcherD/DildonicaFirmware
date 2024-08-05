@@ -8,6 +8,7 @@
 #include <zephyr/kernel.h>
 
 #include <math.h>
+
 #include "circularbuffer.hpp"
 
 #include <nrfx_uarte.h>
@@ -29,8 +30,8 @@ struct DildonicaSampleRaw {
     uint32_t cyclePeriod;
 };
 
-const float ExponentialMeanMaxError = 10000;
-const float ExponentialMeanRate = 0.001;
+constexpr float ExponentialMeanMaxError = 10000;
+constexpr float ExponentialMeanRate = 0.001;
 struct DildonicaZoneState {
     float cyclePeriodExponentialMean;
     float valueNormalized;
@@ -61,39 +62,29 @@ static const struct gpio_dt_spec PIN_DILDONICA_ZONE_SELECT[] = {
 
 // Timer begins counting after this many oscillation cycles
 // The delay is to ignore irregular cycles right after the coil is powered up
-const uint32_t DILDONICA_MEASUREMENT_CYCLES_BEGIN = 100;
+constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_BEGIN = 100;
 // Measurement stops after this many cycles
-const uint32_t DILDONICA_MEASUREMENT_CYCLES_END = 10000 + DILDONICA_MEASUREMENT_CYCLES_BEGIN;
+constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_END = 10000 + DILDONICA_MEASUREMENT_CYCLES_BEGIN;
 // If we don't have enough cycles after this much time, timeout - hardware error (coil broken, etc.)
-const uint32_t DILDONICA_MEASUREMENT_TIMEOUT_US = 50000;
+constexpr uint32_t DILDONICA_MEASUREMENT_TIMEOUT_US = 50000;
 
 
 // Low and high voltage threshold values used for counting cycles
-const uint32_t DILDONICA_OSC_COMP_THRESH_LO = 10;
-const uint32_t DILDONICA_OSC_COMP_THRESH_HI = 20;
+constexpr uint32_t DILDONICA_OSC_COMP_THRESH_LO = 10;
+constexpr uint32_t DILDONICA_OSC_COMP_THRESH_HI = 20;
 
-const uint8_t DILDONICA_N_ZONES = 8;
+constexpr uint8_t DILDONICA_N_ZONES = 8;
 uint8_t dildonicaCurZone = 0;
 
 static CircularQueue<DildonicaSampleRaw, 256> dildonicaSampleQueue;
 
-const float DILDONICA_SAMPLE_MAX_ERROR = 10000;
-const float DILDONICA_SAMPLE_AVERAGE_COEFF = 0.001;
-
 DildonicaZoneState dildonicaZoneStates[DILDONICA_N_ZONES];
 
-const uint8_t DILDONICA_MIDI_CONTROL_START = 41;
+constexpr uint8_t DILDONICA_MIDI_CONTROL_START = 41;
 // This is: Units of MIDI Control Change for a 100% change in cycle period
-const float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
-
+constexpr float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
 
 uint32_t led_test = 0;
-
-
-template <typename T, size_t N>
-char ( &_ArraySizeHelper( T (&array)[N] ))[N];
-#define mycountof( array ) (sizeof( _ArraySizeHelper( array ) ))
-
 
 void setDildonicaZoneActiveMask(uint8_t zoneMask) {
     for (uint8_t i = 0; i != 8; i++) {
@@ -166,7 +157,7 @@ void setup_comparator() {
 
 #if defined(__ZEPHYR__)
     IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_COMP), IRQ_PRIO_LOWEST,
-                nrfx_comp_irq_handler, 0, 0);
+                nrfx_comp_irq_handler, nullptr, 0);
 #endif
 
     nrfx_comp_config_t comp_config = NRFX_COMP_DEFAULT_CONFIG(NRF_COMP_INPUT_4);
@@ -219,9 +210,9 @@ void setup_timers() {
 
 #if defined(__ZEPHYR__)
     IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(D_TIMER_INST_IDX)), IRQ_PRIO_LOWEST,
-                NRFX_TIMER_INST_HANDLER_GET(D_TIMER_INST_IDX), 0, 0);
+                NRFX_TIMER_INST_HANDLER_GET(D_TIMER_INST_IDX), nullptr, 0);
     IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TIMER_INST_GET(D_COUNTER_INST_IDX)), IRQ_PRIO_LOWEST,
-                NRFX_TIMER_INST_HANDLER_GET(D_COUNTER_INST_IDX), 0, 0);
+                NRFX_TIMER_INST_HANDLER_GET(D_COUNTER_INST_IDX), nullptr, 0);
 #endif
 
     uint32_t base_frequency = NRF_TIMER_BASE_FREQUENCY_GET(TIMER_D_TIMER.p_reg);
@@ -271,7 +262,7 @@ int main(void) {
     setup_bluetooth_peripheral();
 }
 
-void dildonica_thread(void) 
+void dildonica_thread()
 {
     while(1) {
         uint8_t value = 0;

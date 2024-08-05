@@ -8,13 +8,11 @@ extern "C" {
     #include <zephyr/bluetooth/gatt.h>
 }
 
-#include "bluetooth_midi.hpp"
-
 extern bool notif_enabled;
 extern struct bt_conn *conn_connected;
 extern uint8_t midi_data[5];
 
-extern const bt_gatt_service_static midi_svc;
+extern const struct bt_gatt_service_static midi_svc;
 
 struct MidiMessage {
 	uint8_t timestampHi;
@@ -35,7 +33,7 @@ uint8_t getTimestampLowByte(uint16_t timestampMillis) {
 
 void send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
 {
-	struct MidiMessage thisMessage;
+	struct MidiMessage thisMessage{};
 	timestamp = timestamp % (1<<13);
 	thisMessage.timestampHi = getTimestampHighByte(timestamp);
 	thisMessage.timestampLo = getTimestampLowByte(timestamp);
@@ -48,13 +46,13 @@ void send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t contr
 }
 
 
-void send_midi_thread(void) 
+void send_midi_thread()
 {
 	while(1) {
 		if(notif_enabled && !midiMessageQueue.is_empty()) {
             MidiMessage thisMessage = midiMessageQueue.dequeue();
 
-            struct bt_conn *conn = NULL;
+            struct bt_conn *conn = nullptr;
 
             if (conn_connected) {
                 /* Get a connection reference to ensure that a
@@ -68,32 +66,17 @@ void send_midi_thread(void)
             if (conn) {
 				size_t dataLen = 0;
 
-				//uint8_t timestampHi = thisMessage->timestampHi;
                 midi_data[dataLen++] = thisMessage.timestampHi;
-
                 midi_data[dataLen++] = thisMessage.timestampLo;
-
 				midi_data[dataLen++] = thisMessage.midiBytes[0];
 				midi_data[dataLen++] = thisMessage.midiBytes[1];
 				midi_data[dataLen++] = thisMessage.midiBytes[2];
-                // for(size_t i = 0; i != thisMessage->midiLen; i++) {
-                // 	midi_data[dataLen++] = thisMessage->midiBytes[i];
-                // }
-
-				// while(!k_fifo_is_empty(midi_fifo) {
-
-				// })
-
 
                 //Send MIDI message as a notification
                 int err = bt_gatt_notify(conn, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
                 if (err) {
                     printk("Failed to send MIDI notification (err %d)\n", err);
                 } 
-
-				if(midi_data[0] == 0) {
-					printk("bad sample!!");
-				}
 
                 bt_conn_unref(conn);			
             }
