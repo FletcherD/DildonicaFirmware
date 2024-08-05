@@ -22,7 +22,7 @@ static nrfx_timer_t TIMER_D_COUNTER = NRFX_TIMER_INSTANCE(D_COUNTER_INST_IDX);
 #define TICKS_PER_MILLISECOND (NRF_TIMER_BASE_FREQUENCY_GET(TIMER_D_TIMER.p_reg) / 1000) 
 #define TIMESTAMP_MS_MAX (1<<13)
 #define TIMESTAMP_TICKS_MAX (TIMESTAMP_MS_MAX * TICKS_PER_MILLISECOND)
-static uint32_t curTime = 0;
+static uint64_t curTime = 0;
 
 struct DildonicaSampleRaw {
     uint8_t zone;
@@ -76,7 +76,7 @@ constexpr uint32_t DILDONICA_OSC_COMP_THRESH_HI = 20;
 constexpr uint8_t DILDONICA_N_ZONES = 8;
 uint8_t dildonicaCurZone = 0;
 
-static CircularQueue<DildonicaSampleRaw, 256> dildonicaSampleQueue;
+static CircularQueue<DildonicaSampleRaw, 64> dildonicaSampleQueue;
 
 DildonicaZoneState dildonicaZoneStates[DILDONICA_N_ZONES];
 
@@ -111,11 +111,10 @@ static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
 
         uint32_t sampleTime = DILDONICA_MEASUREMENT_TIMEOUT_US * 16;
         curTime += sampleTime;
-        curTime = (curTime % TIMESTAMP_TICKS_MAX);
 
         DildonicaSampleRaw thisSample = {
             dildonicaCurZone,
-            curTime,
+            curTime / TICKS_PER_MILLISECOND,
             sampleTime
         };
         dildonicaSampleQueue.enqueue(thisSample);
@@ -133,11 +132,10 @@ static void d_counter_handler(nrf_timer_event_t event_type, void* p_context) {
         // Normal coil measurement
         
         curTime += nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1);
-        curTime = (curTime % TIMESTAMP_TICKS_MAX);
 
         DildonicaSampleRaw thisSample = {
             dildonicaCurZone,
-            curTime,
+            curTime / TICKS_PER_MILLISECOND,
             nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1) - nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL0)
         };
         dildonicaSampleQueue.enqueue(thisSample);
@@ -249,7 +247,7 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_COUNTER);
 }
 
-extern bool send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t controller, uint8_t value);
+extern void send_dildonica_raw(uint32_t timestamp, uint16_t zone, uint32_t value);
 extern void setup_bluetooth_peripheral();
 
 int main(void) {
@@ -266,7 +264,7 @@ void dildonica_thread()
 {
     while(1) {
         uint8_t value = 0;
-        if(!dildonicaSampleQueue.is_empty()) {
+        while(!dildonicaSampleQueue.is_empty()) {
             gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
 
             DildonicaSampleRaw dSample = dildonicaSampleQueue.dequeue();
@@ -282,11 +280,9 @@ void dildonica_thread()
             //serialWrite((uint8_t *) message, message_len);
 
 
-            uint32_t timestampMillis = dSample.timestamp / TICKS_PER_MILLISECOND;
+            uint32_t timestampMillis = dSample.timestamp;
 
-            int32_t midiControlValue = lround(zoneState.valueNormalized * DILDONICA_MIDI_CONTROL_SLOPE) + 63;
-            midiControlValue = (midiControlValue < 0) ? 0 : ((midiControlValue > 127) ? 127 : midiControlValue);
-            send_midi_control_change(timestampMillis, 0, DILDONICA_MIDI_CONTROL_START + dSampleZone, midiControlValue);
+            send_dildonica_raw(timestampMillis, dSample.zone, dSample.cyclePeriod);
 
         }
 

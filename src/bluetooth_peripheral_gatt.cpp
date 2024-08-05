@@ -15,6 +15,8 @@ extern "C" {
 
 #include "bluetooth_cpp_compat.hpp"
 
+#include "dildonica_midi.hpp"
+
 // from gatt_write_common.c /////////////////////////////////
 
 static struct bt_gatt_exchange_params mtu_exchange_params;
@@ -147,14 +149,14 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 bool notif_enabled = false;
 
-uint8_t midi_data[17] = {0x80, 0x80, 0, 0, 0}; // Buffer for MIDI messages
+DildonicaData lastDildonicaSample;
 
 extern const struct bt_gatt_service_static midi_svc;
 
-#define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x03B80E5A, 0xEDE8, 0x4B33, 0xA751, 0x6CE34EC4C700)
+#define BT_UUID_MIDI_SERVICE BT_UUID_128_ENCODE(0x64696C64, 0x0000, 0x1000, 0x8000, 0x0000CAFEBABE)
 struct bt_uuid_128 midi_service_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_SERVICE);
 
-#define BT_UUID_MIDI_CHARACTERISTIC BT_UUID_128_ENCODE(0x7772E5DB, 0x3868, 0x4112, 0xA1A9, 0xF2669D106BF3)
+#define BT_UUID_MIDI_CHARACTERISTIC BT_UUID_128_ENCODE(0x6F6E6963, 0x0000, 0x1000, 0x8000, 0x0000CAFEBABE)
 struct bt_uuid_128 midi_characteristic_uuid = BT_UUID_INIT_128(BT_UUID_MIDI_CHARACTERISTIC);
 
 void midi_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
@@ -167,7 +169,7 @@ ssize_t read_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,
                          void *buf, uint16_t len, uint16_t offset)
 {
     printk("MIDI read request\n");
-    return bt_gatt_attr_read(conn, attr, buf, len, offset, midi_data, sizeof(midi_data));
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &lastDildonicaSample, sizeof(lastDildonicaSample));
 }
 
 ssize_t write_midi(struct bt_conn *conn, const struct bt_gatt_attr *attr,

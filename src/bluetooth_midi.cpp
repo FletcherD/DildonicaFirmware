@@ -2,6 +2,8 @@
 
 #include "circularbuffer.hpp"
 
+#include "dildonica_midi.hpp"
+
 extern "C" {
     #include <zephyr/bluetooth/bluetooth.h>
     #include <zephyr/bluetooth/conn.h>
@@ -10,18 +12,10 @@ extern "C" {
 
 extern bool notif_enabled;
 extern struct bt_conn *conn_connected;
-extern uint8_t midi_data[5];
 
 extern const struct bt_gatt_service_static midi_svc;
 
-struct MidiMessage {
-	uint8_t timestampHi;
-	uint8_t timestampLo;
-	uint8_t midiBytes[3];
-	uint8_t midiLen;
-};
-
-static CircularQueue<MidiMessage, 16> midiMessageQueue;
+static CircularQueue<DildonicaData, 64> dildonicaMessageQueue;
 
 uint8_t getTimestampHighByte(uint16_t timestampMillis) {
 	return 0x80 | ((timestampMillis >> 7) 	& 0b0111111);
@@ -31,30 +25,27 @@ uint8_t getTimestampLowByte(uint16_t timestampMillis) {
 }
 
 
-void send_midi_control_change(uint32_t timestamp, uint8_t channel, uint8_t controller, uint8_t value)
+void send_dildonica_raw(uint32_t timestamp, uint16_t zone, uint32_t value)
 {
-	struct MidiMessage thisMessage{};
-	timestamp = timestamp % (1<<13);
-	thisMessage.timestampHi = getTimestampHighByte(timestamp);
-	thisMessage.timestampLo = getTimestampLowByte(timestamp);
-	thisMessage.midiBytes[0] = 0xB0 | (channel & 0x0F);
-	thisMessage.midiBytes[1] = controller & 0x7F;
-	thisMessage.midiBytes[2] = value & 0x7F;
-	thisMessage.midiLen = 3;
+	DildonicaData thisMessage = {
+        timestamp,
+        value,
+        zone
+    };
 
-    midiMessageQueue.enqueue(thisMessage);
+    dildonicaMessageQueue.enqueue(thisMessage);
 }
 
 
 void send_midi_thread()
 {
 	while(1) {
-		if(notif_enabled && !midiMessageQueue.is_empty()) {
-            MidiMessage thisMessage = midiMessageQueue.dequeue();
+		while(!dildonicaMessageQueue.is_empty()) {
+            DildonicaData thisMessage = dildonicaMessageQueue.dequeue();
 
             struct bt_conn *conn = nullptr;
 
-            if (conn_connected) {
+            if (conn_connected && notif_enabled) {
                 /* Get a connection reference to ensure that a
                     * reference is maintained in case disconnected
                     * callback is called while we perform GATT Write
@@ -64,19 +55,12 @@ void send_midi_thread()
             }
 
             if (conn) {
-				size_t dataLen = 0;
-
-                midi_data[dataLen++] = thisMessage.timestampHi;
-                midi_data[dataLen++] = thisMessage.timestampLo;
-				midi_data[dataLen++] = thisMessage.midiBytes[0];
-				midi_data[dataLen++] = thisMessage.midiBytes[1];
-				midi_data[dataLen++] = thisMessage.midiBytes[2];
 
                 //Send MIDI message as a notification
-                int err = bt_gatt_notify(conn, &midi_svc.attrs[1], midi_data, sizeof(midi_data));
+                int err = bt_gatt_notify(conn, &midi_svc.attrs[1], &thisMessage, sizeof(thisMessage));
                 if (err) {
                     printk("Failed to send MIDI notification (err %d)\n", err);
-                } 
+                }
 
                 bt_conn_unref(conn);			
             }
