@@ -15,7 +15,7 @@ extern struct bt_conn *conn_connected;
 
 extern const struct bt_gatt_service_static midi_svc;
 
-static CircularQueue<DildonicaData, 64> dildonicaMessageQueue;
+static CircularQueue<DildonicaData, 256> dildonicaMessageQueue;
 
 uint8_t getTimestampHighByte(uint16_t timestampMillis) {
 	return 0x80 | ((timestampMillis >> 7) 	& 0b0111111);

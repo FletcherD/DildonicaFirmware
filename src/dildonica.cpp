@@ -16,8 +16,10 @@
 
 #define D_TIMER_INST_IDX 3
 #define D_COUNTER_INST_IDX 4
+#define D_TIMESTAMP_INST_IDX 2
 static nrfx_timer_t TIMER_D_TIMER = NRFX_TIMER_INSTANCE(D_TIMER_INST_IDX);
 static nrfx_timer_t TIMER_D_COUNTER = NRFX_TIMER_INSTANCE(D_COUNTER_INST_IDX);
+static nrfx_timer_t TIMER_D_TIMESTAMP = NRFX_TIMER_INSTANCE(D_TIMESTAMP_INST_IDX);
 
 #define TICKS_PER_MILLISECOND (NRF_TIMER_BASE_FREQUENCY_GET(TIMER_D_TIMER.p_reg) / 1000) 
 #define TIMESTAMP_MS_MAX (1<<13)
@@ -47,7 +49,9 @@ static const struct gpio_dt_spec PIN_LED0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpi
 //static const struct gpio_dt_spec PIN_LED2 = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
 // const int PIN_RGBLED_CLOCK = 6;
 // const int PIN_RGBLED_DATA = 8;
-//static const struct gpio_dt_spec PIN_DILDONICA_OSC = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, dildonica_osc_in_gpios);
+
+static constexpr uint8_t DILDONICA_N_ZONES = 8;
+static constexpr size_t DILDONICA_N_ZONE_SELECT_PINS = 8;
 static const struct gpio_dt_spec PIN_DILDONICA_ZONE_SELECT[] = {
     GPIO_DT_SPEC_GET_BY_IDX(ZEPHYR_USER_NODE, dildonica_zone_select_gpios, 0),
     GPIO_DT_SPEC_GET_BY_IDX(ZEPHYR_USER_NODE, dildonica_zone_select_gpios, 1),
@@ -59,21 +63,18 @@ static const struct gpio_dt_spec PIN_DILDONICA_ZONE_SELECT[] = {
     GPIO_DT_SPEC_GET_BY_IDX(ZEPHYR_USER_NODE, dildonica_zone_select_gpios, 7),
 };
 
-
 // Timer begins counting after this many oscillation cycles
 // The delay is to ignore irregular cycles right after the coil is powered up
-constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_BEGIN = 100;
+constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_BEGIN = 30;
 // Measurement stops after this many cycles
-constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_END = 10000 + DILDONICA_MEASUREMENT_CYCLES_BEGIN;
+constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_END = 5000 + DILDONICA_MEASUREMENT_CYCLES_BEGIN;
 // If we don't have enough cycles after this much time, timeout - hardware error (coil broken, etc.)
-constexpr uint32_t DILDONICA_MEASUREMENT_TIMEOUT_US = 50000;
-
+constexpr uint32_t DILDONICA_MEASUREMENT_TIMEOUT = DILDONICA_MEASUREMENT_CYCLES_END * 20;
 
 // Low and high voltage threshold values used for counting cycles
 constexpr uint32_t DILDONICA_OSC_COMP_THRESH_LO = 10;
 constexpr uint32_t DILDONICA_OSC_COMP_THRESH_HI = 20;
 
-constexpr uint8_t DILDONICA_N_ZONES = 8;
 uint8_t dildonicaCurZone = 0;
 
 static CircularQueue<DildonicaSampleRaw, 64> dildonicaSampleQueue;
@@ -84,10 +85,10 @@ constexpr uint8_t DILDONICA_MIDI_CONTROL_START = 41;
 // This is: Units of MIDI Control Change for a 100% change in cycle period
 constexpr float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
 
-uint32_t led_test = 0;
+uint32_t ledState = 0;
 
 void setDildonicaZoneActiveMask(uint8_t zoneMask) {
-    for (uint8_t i = 0; i != 8; i++) {
+    for (uint8_t i = 0; i != DILDONICA_N_ZONE_SELECT_PINS; i++) {
         bool pinState = ((1 << i) & zoneMask);
         gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], pinState);
     }
@@ -107,18 +108,18 @@ void updateDildonicaZone(DildonicaZoneState& zoneState, DildonicaSampleRaw& samp
 
 static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
     if (event_type == NRF_TIMER_EVENT_COMPARE2) {
-        // Measurement timeout - probably coil problem.
+        // Measurement timeout - this indicates a coil problem or other hardware issue
 
-        uint32_t sampleTime = DILDONICA_MEASUREMENT_TIMEOUT_US * 16;
-        curTime += sampleTime;
+        // This math keeps the time correct after the 32-bit rollover
+        curTime += nrfx_timer_capture(&TIMER_D_TIMESTAMP, NRF_TIMER_CC_CHANNEL0) - ((uint32_t)curTime);
 
         DildonicaSampleRaw thisSample = {
             dildonicaCurZone,
             curTime / TICKS_PER_MILLISECOND,
-            sampleTime
+            0
         };
         dildonicaSampleQueue.enqueue(thisSample);
-
+        
         dildonicaCurZone = (dildonicaCurZone + 1) % DILDONICA_N_ZONES;
         setDildonicaZoneActiveMask(1 << dildonicaCurZone);
 
@@ -131,12 +132,16 @@ static void d_counter_handler(nrf_timer_event_t event_type, void* p_context) {
     if (event_type == NRF_TIMER_EVENT_COMPARE1) {
         // Normal coil measurement
         
-        curTime += nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1);
+        uint32_t captureTimeBegin = nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL0);
+        uint32_t captureTimeEnd = nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1);
+
+        // This math keeps the time correct after the 32-bit rollover
+        curTime += nrfx_timer_capture(&TIMER_D_TIMESTAMP, NRF_TIMER_CC_CHANNEL0) - ((uint32_t)curTime);
 
         DildonicaSampleRaw thisSample = {
             dildonicaCurZone,
             curTime / TICKS_PER_MILLISECOND,
-            nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL1) - nrfx_timer_capture_get(&TIMER_D_TIMER, NRF_TIMER_CC_CHANNEL0)
+            captureTimeEnd - captureTimeBegin
         };
         dildonicaSampleQueue.enqueue(thisSample);
 
@@ -148,24 +153,14 @@ static void d_counter_handler(nrf_timer_event_t event_type, void* p_context) {
     }
 }
 
-static void comp_handler(nrf_comp_event_t event_type) {
-}
-
 void setup_comparator() {
-
-#if defined(__ZEPHYR__)
-    IRQ_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_COMP), IRQ_PRIO_LOWEST,
-                nrfx_comp_irq_handler, nullptr, 0);
-#endif
-
     nrfx_comp_config_t comp_config = NRFX_COMP_DEFAULT_CONFIG(NRF_COMP_INPUT_4);
     comp_config.main_mode = NRF_COMP_MAIN_MODE_SE;
     comp_config.speed_mode = NRF_COMP_SP_MODE_HIGH;
     comp_config.reference = NRF_COMP_REF_VDD;
     comp_config.threshold.th_down = DILDONICA_OSC_COMP_THRESH_LO;
     comp_config.threshold.th_up = DILDONICA_OSC_COMP_THRESH_HI;
-    nrfx_err_t err = nrfx_comp_init(&comp_config, comp_handler);
-
+    nrfx_err_t err = nrfx_comp_init(&comp_config, NULL);
     nrfx_comp_start(0,0);
 }
 
@@ -194,7 +189,6 @@ void setup_gpio() {
     gpio_pin_set_dt(&PIN_LED0, LED_OFF);
     //gpio_pin_set_dt(&PIN_LED1, LED_OFF);
     //gpio_pin_set_dt(&PIN_LED2, LED_OFF);
-    //gpio_pin_configure_dt(&PIN_DILDONICA_OSC, GPIO_INPUT);
 
     for (int i = 0; i < 8; i++) {
         gpio_pin_configure_dt(&PIN_DILDONICA_ZONE_SELECT[i], GPIO_OUTPUT);
@@ -217,21 +211,22 @@ void setup_timers() {
     nrfx_timer_config_t timer_cfg = NRFX_TIMER_DEFAULT_CONFIG(base_frequency);
     timer_cfg.bit_width = NRF_TIMER_BIT_WIDTH_32;
     timer_cfg.p_context = (void*)"Some context";
-
+    timer_cfg.mode = NRF_TIMER_MODE_TIMER;
     nrfx_timer_init(&TIMER_D_TIMER, &timer_cfg, d_timer_handler);
     // Timeout interrupt
     nrfx_timer_extended_compare(&TIMER_D_TIMER,
                                 NRF_TIMER_CC_CHANNEL2,
-                                DILDONICA_MEASUREMENT_TIMEOUT_US * 16,
+                                DILDONICA_MEASUREMENT_TIMEOUT,
                                 (nrf_timer_short_mask_t)0,
                                 true);
+    nrfx_timer_enable(&TIMER_D_TIMER);
 
     base_frequency = NRF_TIMER_BASE_FREQUENCY_GET(TIMER_D_COUNTER.p_reg);
-    nrfx_timer_config_t counter_cfg = NRFX_TIMER_DEFAULT_CONFIG(base_frequency);
-    counter_cfg.bit_width = NRF_TIMER_BIT_WIDTH_32;
-    counter_cfg.p_context = (void*)"Some context";
-    counter_cfg.mode = NRF_TIMER_MODE_COUNTER;
-    nrfx_timer_init(&TIMER_D_COUNTER, &counter_cfg, d_counter_handler);
+    timer_cfg = NRFX_TIMER_DEFAULT_CONFIG(base_frequency);
+    timer_cfg.bit_width = NRF_TIMER_BIT_WIDTH_32;
+    timer_cfg.p_context = (void*)"Some context";
+    timer_cfg.mode = NRF_TIMER_MODE_COUNTER;
+    nrfx_timer_init(&TIMER_D_COUNTER, &timer_cfg, d_counter_handler);
     nrfx_timer_extended_compare(&TIMER_D_COUNTER,
                                 NRF_TIMER_CC_CHANNEL0,
                                 DILDONICA_MEASUREMENT_CYCLES_BEGIN,
@@ -242,9 +237,15 @@ void setup_timers() {
                                 DILDONICA_MEASUREMENT_CYCLES_END,
                                 (nrf_timer_short_mask_t)0,
                                 true);
-
-    nrfx_timer_enable(&TIMER_D_TIMER);
     nrfx_timer_enable(&TIMER_D_COUNTER);
+
+    base_frequency = NRF_TIMER_BASE_FREQUENCY_GET(TIMER_D_TIMESTAMP.p_reg);
+    timer_cfg = NRFX_TIMER_DEFAULT_CONFIG(base_frequency);
+    timer_cfg.bit_width = NRF_TIMER_BIT_WIDTH_32;
+    timer_cfg.p_context = (void*)"Some context";
+    timer_cfg.mode = NRF_TIMER_MODE_TIMER;
+    nrfx_timer_init(&TIMER_D_TIMESTAMP, &timer_cfg, NULL);
+    nrfx_timer_enable(&TIMER_D_TIMESTAMP);
 }
 
 extern void send_dildonica_raw(uint32_t timestamp, uint16_t zone, uint32_t value);
@@ -253,37 +254,28 @@ extern void setup_bluetooth_peripheral();
 int main(void) {
     setup_gpio();
     setup_timers();
-
     setup_comparator();
     setup_ppi();
-
     setup_bluetooth_peripheral();
 }
 
 void dildonica_thread()
 {
     while(1) {
-        uint8_t value = 0;
         while(!dildonicaSampleQueue.is_empty()) {
-            gpio_pin_set_dt(&PIN_LED0, (led_test++) & 1);
+            gpio_pin_set_dt(&PIN_LED0, (ledState++) & 1);
 
             DildonicaSampleRaw dSample = dildonicaSampleQueue.dequeue();
 
-            uint8_t dSampleZone = dSample.zone;
-            DildonicaZoneState& zoneState = dildonicaZoneStates[dSampleZone];
+            // DildonicaZoneState& zoneState = dildonicaZoneStates[dSampleZone];
+            // updateDildonicaZone(zoneState, dSample);
 
-            updateDildonicaZone(zoneState, dSample);
+            // Serial.printf("%d, %d, %0.9f\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
+            // static char message[64];
+            // size_t message_len = sprintf(message, "%d, %d, %0.9f\r\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
+            // serialWrite((uint8_t *) message, message_len);
 
-            //Serial.printf("%d, %d, %0.9f\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
-            //static char message[64];
-            //size_t message_len = sprintf(message, "%d, %d, %0.9f\r\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
-            //serialWrite((uint8_t *) message, message_len);
-
-
-            uint32_t timestampMillis = dSample.timestamp;
-
-            send_dildonica_raw(timestampMillis, dSample.zone, dSample.cyclePeriod);
-
+            send_dildonica_raw(dSample.timestamp, dSample.zone, dSample.cyclePeriod);
         }
 
         k_yield();

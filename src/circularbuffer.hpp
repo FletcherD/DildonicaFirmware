@@ -20,7 +20,7 @@ public:
         buffer[rear] = item;
         rear = (rear + 1) % CAPACITY;
         if (is_full()) {
-            while(1);
+            while(1){};
         }
         size++;
     }
