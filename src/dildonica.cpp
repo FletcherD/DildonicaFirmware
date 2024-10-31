@@ -72,8 +72,8 @@ constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_END = 5000 + DILDONICA_MEASUREME
 constexpr uint32_t DILDONICA_MEASUREMENT_TIMEOUT = DILDONICA_MEASUREMENT_CYCLES_END * 20;
 
 // Low and high voltage threshold values used for counting cycles
-constexpr uint32_t DILDONICA_OSC_COMP_THRESH_LO = 10;
-constexpr uint32_t DILDONICA_OSC_COMP_THRESH_HI = 20;
+constexpr uint32_t DILDONICA_OSC_COMP_THRESH_LO = 14;
+constexpr uint32_t DILDONICA_OSC_COMP_THRESH_HI = 16;
 
 uint8_t dildonicaCurZone = 0;
 
