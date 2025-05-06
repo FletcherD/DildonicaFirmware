@@ -15,7 +15,7 @@ extern "C" {
 
 #include "bluetooth_cpp_compat.hpp"
 
-#include "dildonica_midi.hpp"
+#include "bluetooth_dildonica.hpp"
 
 // from gatt_write_common.c /////////////////////////////////
 

@@ -2,7 +2,7 @@
 
 #include "circularbuffer.hpp"
 
-#include "dildonica_midi.hpp"
+#include "bluetooth_dildonica.hpp"
 
 extern "C" {
     #include <zephyr/bluetooth/bluetooth.h>
@@ -17,15 +17,7 @@ extern const struct bt_gatt_service_static midi_svc;
 
 static CircularQueue<DildonicaData, 256> dildonicaMessageQueue;
 
-uint8_t getTimestampHighByte(uint16_t timestampMillis) {
-	return 0x80 | ((timestampMillis >> 7) 	& 0b0111111);
-}
-uint8_t getTimestampLowByte(uint16_t timestampMillis) {
-	return 0x80 | (timestampMillis 		    & 0b1111111);
-}
-
-
-void send_dildonica_raw(uint32_t timestamp, uint16_t zone, uint32_t value)
+void enqueue_bluetooth_sample(uint32_t timestamp, uint16_t zone, uint32_t value)
 {
 	DildonicaData thisMessage = {
         timestamp,

@@ -4,15 +4,10 @@
 #include <nrfx_timer.h>
 #include <nrfx_comp.h>
 #include <nrfx_ppi.h>
-
 #include <zephyr/kernel.h>
-
 #include <math.h>
 
 #include "circularbuffer.hpp"
-
-#include <nrfx_uarte.h>
-#include <nrfx_gpiote.h>
 
 #define D_TIMER_INST_IDX 3
 #define D_COUNTER_INST_IDX 4
@@ -30,14 +25,6 @@ struct DildonicaSampleRaw {
     uint8_t zone;
     uint32_t timestamp;
     uint32_t cyclePeriod;
-};
-
-constexpr float ExponentialMeanMaxError = 10000;
-constexpr float ExponentialMeanRate = 0.001;
-struct DildonicaZoneState {
-    float cyclePeriodExponentialMean;
-    float valueNormalized;
-    uint8_t midiControlValue;
 };
 
 #define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
@@ -79,32 +66,19 @@ uint8_t dildonicaCurZone = 0;
 
 static CircularQueue<DildonicaSampleRaw, 64> dildonicaSampleQueue;
 
-DildonicaZoneState dildonicaZoneStates[DILDONICA_N_ZONES];
-
 constexpr uint8_t DILDONICA_MIDI_CONTROL_START = 41;
 // This is: Units of MIDI Control Change for a 100% change in cycle period
 constexpr float DILDONICA_MIDI_CONTROL_SLOPE = 10000.0;
 
 uint32_t ledState = 0;
 
-void setDildonicaZoneActiveMask(uint8_t zoneMask) {
+void set_dildonica_active_zones(uint8_t zoneMask) {
     for (uint8_t i = 0; i != DILDONICA_N_ZONE_SELECT_PINS; i++) {
         bool pinState = ((1 << i) & zoneMask);
         gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], pinState);
     }
 }
 
-void updateDildonicaZone(DildonicaZoneState& zoneState, DildonicaSampleRaw& sample) {
-    float cyclePeriod = (float)sample.cyclePeriod;
-    zoneState.valueNormalized = cyclePeriod - zoneState.cyclePeriodExponentialMean;
-    if( fabs(zoneState.valueNormalized) > ExponentialMeanMaxError ) {
-        zoneState.cyclePeriodExponentialMean = cyclePeriod;
-        zoneState.valueNormalized = 0;
-    } else {
-        zoneState.cyclePeriodExponentialMean += zoneState.valueNormalized * ExponentialMeanRate;
-    }
-    zoneState.valueNormalized /= zoneState.cyclePeriodExponentialMean;
-}
 
 static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
     if (event_type == NRF_TIMER_EVENT_COMPARE2) {
@@ -120,8 +94,9 @@ static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
         };
         dildonicaSampleQueue.enqueue(thisSample);
         
+        // Move to next zone
         dildonicaCurZone = (dildonicaCurZone + 1) % DILDONICA_N_ZONES;
-        setDildonicaZoneActiveMask(1 << dildonicaCurZone);
+        set_dildonica_active_zones(1 << dildonicaCurZone);
 
         nrfx_timer_clear(&TIMER_D_TIMER);
         nrfx_timer_clear(&TIMER_D_COUNTER);
@@ -146,7 +121,7 @@ static void d_counter_handler(nrf_timer_event_t event_type, void* p_context) {
         dildonicaSampleQueue.enqueue(thisSample);
 
         dildonicaCurZone = (dildonicaCurZone + 1) % DILDONICA_N_ZONES;
-        setDildonicaZoneActiveMask(1 << dildonicaCurZone);
+        set_dildonica_active_zones(1 << dildonicaCurZone);
 
         nrfx_timer_clear(&TIMER_D_TIMER);
         nrfx_timer_clear(&TIMER_D_COUNTER);
@@ -195,7 +170,7 @@ void setup_gpio() {
         gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], 0);
     }
 
-    setDildonicaZoneActiveMask(1);
+    set_dildonica_active_zones(1);
 }
 
 void setup_timers() {
@@ -248,7 +223,7 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_TIMESTAMP);
 }
 
-extern void send_dildonica_raw(uint32_t timestamp, uint16_t zone, uint32_t value);
+extern void enqueue_bluetooth_sample(uint32_t timestamp, uint16_t zone, uint32_t value);
 extern void setup_bluetooth_peripheral();
 
 int main(void) {
@@ -267,15 +242,7 @@ void dildonica_thread()
 
             DildonicaSampleRaw dSample = dildonicaSampleQueue.dequeue();
 
-            // DildonicaZoneState& zoneState = dildonicaZoneStates[dSampleZone];
-            // updateDildonicaZone(zoneState, dSample);
-
-            // Serial.printf("%d, %d, %0.9f\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
-            // static char message[64];
-            // size_t message_len = sprintf(message, "%d, %d, %0.9f\r\n", dSampleZone, dSample.cyclePeriod, zoneState.valueNormalized);
-            // serialWrite((uint8_t *) message, message_len);
-
-            send_dildonica_raw(dSample.timestamp, dSample.zone, dSample.cyclePeriod);
+            enqueue_bluetooth_sample(dSample.timestamp, dSample.zone, dSample.cyclePeriod);
         }
 
         k_yield();
