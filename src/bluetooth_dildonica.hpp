@@ -7,4 +7,6 @@ struct DildonicaBluetoothMessage {
 	uint8_t threshHi;
 };
 
+void setup_bluetooth_peripheral();
+
 void send_bluetooth_sample(DildonicaBluetoothMessage sample);

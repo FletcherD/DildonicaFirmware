@@ -15,8 +15,6 @@ extern struct bt_conn *conn_connected;
 
 extern const struct bt_gatt_service_static midi_svc;
 
-static CircularQueue<DildonicaBluetoothMessage, 256> dildonicaMessageQueue;
-
 void send_bluetooth_sample(DildonicaBluetoothMessage btMessage) {
 
     struct bt_conn *conn = nullptr;

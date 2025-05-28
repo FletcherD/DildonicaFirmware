@@ -250,9 +250,6 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_TIMESTAMP);
 }
 
-extern void setup_bluetooth_peripheral();
-
-
 void dildonica_thread()
 {
     while(1) {
