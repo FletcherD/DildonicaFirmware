@@ -15,17 +15,11 @@ extern struct bt_conn *conn_connected;
 
 extern const struct bt_gatt_service_static midi_svc;
 
-static CircularQueue<DildonicaData, 256> dildonicaMessageQueue;
+static CircularQueue<DildonicaBluetoothMessage, 256> dildonicaMessageQueue;
 
-void enqueue_bluetooth_sample(uint32_t timestamp, uint16_t zone, uint32_t value)
+void enqueue_bluetooth_sample(DildonicaBluetoothMessage sample)
 {
-	DildonicaData thisMessage = {
-        timestamp,
-        value,
-        zone
-    };
-
-    dildonicaMessageQueue.enqueue(thisMessage);
+    dildonicaMessageQueue.enqueue(sample);
 }
 
 
@@ -33,7 +27,7 @@ void send_midi_thread()
 {
 	while(1) {
 		while(!dildonicaMessageQueue.is_empty()) {
-            DildonicaData thisMessage = dildonicaMessageQueue.dequeue();
+            DildonicaBluetoothMessage thisMessage = dildonicaMessageQueue.dequeue();
 
             struct bt_conn *conn = nullptr;
 

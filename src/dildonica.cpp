@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "circularbuffer.hpp"
+#include "bluetooth_dildonica.hpp"
 
 #define D_TIMER_INST_IDX 3
 #define D_COUNTER_INST_IDX 4
@@ -59,10 +60,10 @@ constexpr uint32_t DILDONICA_MEASUREMENT_CYCLES_END = 5000 + DILDONICA_MEASUREME
 constexpr uint32_t DILDONICA_MEASUREMENT_TIMEOUT = DILDONICA_MEASUREMENT_CYCLES_END * 20;
 
 // Low and high voltage threshold values used for counting cycles
-constexpr uint32_t DILDONICA_OSC_COMP_THRESH_LO = 14;
-constexpr uint32_t DILDONICA_OSC_COMP_THRESH_HI = 16;
+uint32_t DILDONICA_OSC_COMP_THRESH_LO = 12;
+uint32_t DILDONICA_OSC_COMP_THRESH_HI = 13;
 
-uint8_t dildonicaCurZone = 0;
+uint8_t dildonicaCurZone = 2;
 
 static CircularQueue<DildonicaSampleRaw, 64> dildonicaSampleQueue;
 
@@ -77,6 +78,39 @@ void set_dildonica_active_zones(uint8_t zoneMask) {
         bool pinState = ((1 << i) & zoneMask);
         gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], pinState);
     }
+}
+
+void setup_comparator() {
+    nrfx_comp_config_t comp_config = NRFX_COMP_DEFAULT_CONFIG(NRF_COMP_INPUT_4);
+    comp_config.main_mode = NRF_COMP_MAIN_MODE_SE;
+    comp_config.speed_mode = NRF_COMP_SP_MODE_HIGH;
+    comp_config.reference = NRF_COMP_REF_VDD;
+    comp_config.threshold.th_down = DILDONICA_OSC_COMP_THRESH_LO;
+    comp_config.threshold.th_up = DILDONICA_OSC_COMP_THRESH_HI;
+    nrfx_err_t err = nrfx_comp_init(&comp_config, NULL);
+    nrfx_comp_start(0,0);
+}
+
+void next_comp_threshold() {
+    DILDONICA_OSC_COMP_THRESH_HI++;
+    if(DILDONICA_OSC_COMP_THRESH_HI == 64) {
+        DILDONICA_OSC_COMP_THRESH_LO++;
+        if(DILDONICA_OSC_COMP_THRESH_LO == 64) {
+            DILDONICA_OSC_COMP_THRESH_LO = 0;
+        }
+        DILDONICA_OSC_COMP_THRESH_HI = 0;
+    }
+
+    nrfx_comp_config_t comp_config = NRFX_COMP_DEFAULT_CONFIG(NRF_COMP_INPUT_4);
+    comp_config.main_mode = NRF_COMP_MAIN_MODE_SE;
+    comp_config.speed_mode = NRF_COMP_SP_MODE_HIGH;
+    comp_config.reference = NRF_COMP_REF_VDD;
+    comp_config.threshold.th_down = DILDONICA_OSC_COMP_THRESH_LO;
+    comp_config.threshold.th_up = DILDONICA_OSC_COMP_THRESH_HI;
+
+    nrfx_comp_stop();
+    nrfx_err_t err = nrfx_comp_reconfigure(&comp_config);
+    nrfx_comp_start(0,0);
 }
 
 
@@ -97,6 +131,8 @@ static void d_timer_handler(nrf_timer_event_t event_type, void* p_context) {
         // Move to next zone
         dildonicaCurZone = (dildonicaCurZone + 1) % DILDONICA_N_ZONES;
         set_dildonica_active_zones(1 << dildonicaCurZone);
+
+        //next_comp_threshold();
 
         nrfx_timer_clear(&TIMER_D_TIMER);
         nrfx_timer_clear(&TIMER_D_COUNTER);
@@ -123,20 +159,11 @@ static void d_counter_handler(nrf_timer_event_t event_type, void* p_context) {
         dildonicaCurZone = (dildonicaCurZone + 1) % DILDONICA_N_ZONES;
         set_dildonica_active_zones(1 << dildonicaCurZone);
 
+        //next_comp_threshold();
+
         nrfx_timer_clear(&TIMER_D_TIMER);
         nrfx_timer_clear(&TIMER_D_COUNTER);
     }
-}
-
-void setup_comparator() {
-    nrfx_comp_config_t comp_config = NRFX_COMP_DEFAULT_CONFIG(NRF_COMP_INPUT_4);
-    comp_config.main_mode = NRF_COMP_MAIN_MODE_SE;
-    comp_config.speed_mode = NRF_COMP_SP_MODE_HIGH;
-    comp_config.reference = NRF_COMP_REF_VDD;
-    comp_config.threshold.th_down = DILDONICA_OSC_COMP_THRESH_LO;
-    comp_config.threshold.th_up = DILDONICA_OSC_COMP_THRESH_HI;
-    nrfx_err_t err = nrfx_comp_init(&comp_config, NULL);
-    nrfx_comp_start(0,0);
 }
 
 void setup_ppi() {
@@ -170,7 +197,7 @@ void setup_gpio() {
         gpio_pin_set_dt(&PIN_DILDONICA_ZONE_SELECT[i], 0);
     }
 
-    set_dildonica_active_zones(1);
+    set_dildonica_active_zones(1 << dildonicaCurZone);
 }
 
 void setup_timers() {
@@ -223,7 +250,6 @@ void setup_timers() {
     nrfx_timer_enable(&TIMER_D_TIMESTAMP);
 }
 
-extern void enqueue_bluetooth_sample(uint32_t timestamp, uint16_t zone, uint32_t value);
 extern void setup_bluetooth_peripheral();
 
 int main(void) {
@@ -242,7 +268,14 @@ void dildonica_thread()
 
             DildonicaSampleRaw dSample = dildonicaSampleQueue.dequeue();
 
-            enqueue_bluetooth_sample(dSample.timestamp, dSample.zone, dSample.cyclePeriod);
+            DildonicaBluetoothMessage btMessage;
+            btMessage.rawSample = dSample.cyclePeriod;
+            btMessage.timestamp = dSample.timestamp;
+            btMessage.zone = dSample.zone;
+            btMessage.threshLo = DILDONICA_OSC_COMP_THRESH_LO;
+            btMessage.threshHi = DILDONICA_OSC_COMP_THRESH_HI;
+
+            enqueue_bluetooth_sample(btMessage);
         }
 
         k_yield();

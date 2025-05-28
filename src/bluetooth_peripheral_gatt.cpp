@@ -149,7 +149,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 
 bool notif_enabled = false;
 
-DildonicaData lastDildonicaSample;
+DildonicaBluetoothMessage lastDildonicaSample;
 
 extern const struct bt_gatt_service_static midi_svc;
 
