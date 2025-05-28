@@ -252,13 +252,6 @@ void setup_timers() {
 
 extern void setup_bluetooth_peripheral();
 
-int main(void) {
-    setup_gpio();
-    setup_timers();
-    setup_comparator();
-    setup_ppi();
-    setup_bluetooth_peripheral();
-}
 
 void dildonica_thread()
 {
@@ -275,21 +268,17 @@ void dildonica_thread()
             btMessage.threshLo = DILDONICA_OSC_COMP_THRESH_LO;
             btMessage.threshHi = DILDONICA_OSC_COMP_THRESH_HI;
 
-            enqueue_bluetooth_sample(btMessage);
+            send_bluetooth_sample(btMessage);
         }
-
-        k_yield();
     }
 }
 
-/* size of stack area used by each thread */
-#define STACKSIZE 1024
-/* scheduling priority used by each thread */
-#define PRIORITY 7
+int main(void) {
+    setup_gpio();
+    setup_timers();
+    setup_comparator();
+    setup_ppi();
+    setup_bluetooth_peripheral();
 
-extern void send_midi_thread(void);
-
-K_THREAD_DEFINE(send_midi_thread_id, STACKSIZE, send_midi_thread, NULL, NULL, NULL,
-		PRIORITY, 0, 0);
-K_THREAD_DEFINE(dildonica_thread_id, STACKSIZE, dildonica_thread, NULL, NULL, NULL,
-		PRIORITY, 0, 0);
+    dildonica_thread();
+}
